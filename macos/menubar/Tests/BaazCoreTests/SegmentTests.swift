@@ -69,7 +69,53 @@ final class SegmentTests: XCTestCase {
     /// that catches this class of bug: `.onTapGesture` renders a row that
     /// looks clickable and silently does nothing inside the menu bar panel.
     /// Layout assertions pass either way.
-    func testClickingTheRowActuallyExpandsIt() {
+    /// Clicks `point` in `host` through the window, the way a real click
+    /// arrives. Shared by the canary below and the test itself.
+    private func click(_ point: NSPoint, in host: NSView, window win: NSWindow) {
+        let inWindow = host.convert(point, to: nil)
+        for (type, num) in [(NSEvent.EventType.leftMouseDown, 1),
+                            (NSEvent.EventType.leftMouseUp, 2)] {
+            if let e = NSEvent.mouseEvent(with: type, location: inWindow, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: win.windowNumber, context: nil, eventNumber: num,
+                clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0) {
+                win.sendEvent(e)
+            }
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+    }
+
+    /// Whether synthetic clicks reach SwiftUI at all here.
+    ///
+    /// A headless CI runner routes no events, and the assertion below cannot
+    /// tell that apart from a button that is genuinely dead — which is the
+    /// whole point of the test. So prove the mechanism on a control that is
+    /// certainly wired up first: if even this does not fire, the environment
+    /// is at fault and the real test is skipped rather than failed.
+    private func canRouteSyntheticClicks() -> Bool {
+        final class Probe { var clicked = false }
+        let probe = Probe()
+        let host = NSHostingView(rootView: AnyView(
+            Button { probe.clicked = true } label: {
+                Color.clear.frame(width: 200, height: 200).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        ))
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 200),
+                           styleMask: [.titled], backing: .buffered, defer: false)
+        win.contentView = host
+        win.makeKeyAndOrderFront(nil)
+        defer { win.orderOut(nil) }
+        host.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        click(NSPoint(x: 100, y: 100), in: host, window: win)
+        return probe.clicked
+    }
+
+    func testClickingTheRowActuallyExpandsIt() throws {
+        try XCTSkipUnless(canRouteSyntheticClicks(),
+                          "this environment does not deliver synthetic clicks to SwiftUI")
+
         let model = DownloadsModel()
         let segs = (0..<8).map { #"{"done":\#($0 * 100),"total":1000}"# }.joined(separator: ",")
         model.ingest(Data((#"{"type":"snapshot","active":1,"totalSpeed":900,"jobs":[{"id":"a1","name":"x.zip","state":"active","total":8000,"done":2400,"speed":900,"eta":12,"dir":"/tmp","segments":[\#(segs)]}],"recent":[]}"# + "\n").utf8))
@@ -82,24 +128,11 @@ final class SegmentTests: XCTestCase {
         host.layoutSubtreeIfNeeded()
         RunLoop.current.run(until: Date().addingTimeInterval(0.4))
 
-        func click(_ p: NSPoint) {
-            let inWin = host.convert(p, to: nil)
-            for (t, n) in [(NSEvent.EventType.leftMouseDown, 1), (NSEvent.EventType.leftMouseUp, 2)] {
-                if let e = NSEvent.mouseEvent(with: t, location: inWin, modifierFlags: [],
-                    timestamp: ProcessInfo.processInfo.systemUptime,
-                    windowNumber: win.windowNumber, context: nil, eventNumber: n,
-                    clickCount: 1, pressure: t == .leftMouseDown ? 1 : 0) {
-                    win.sendEvent(e)
-                }
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.35))
-        }
-
         // Sweep the whole upper panel rather than pinning magic coordinates —
         // font metrics shift the row between runners.
         var toggled = false
         for y in stride(from: CGFloat(60), through: 260, by: 4) where !toggled {
-            click(NSPoint(x: 90, y: y))
+            click(NSPoint(x: 90, y: y), in: host, window: win)
             if model.isExpanded("a1") { toggled = true }
         }
         XCTAssertTrue(toggled, "no click anywhere on the row opened the segment breakdown")
