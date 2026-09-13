@@ -149,6 +149,13 @@ func (e *Engine) Run(parent context.Context, j *Job) error {
 		j.State = StateDone
 		j.CompletedAt = &now
 		j.Error = ""
+		if j.Total <= 0 { // unknown-length stream: the bytes on disk are the size
+			var n int64
+			for _, s := range j.Segments {
+				n += s.written()
+			}
+			j.Total = n
+		}
 		j.Segments = nil // drop segment detail; keep the record for "recent"
 	case errors.Is(err, errPausedConnLost) && j.State == StateActive:
 		j.State = StatePaused
