@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os/exec"
 	"sort"
 	"sync"
 	"time"
@@ -106,6 +107,11 @@ func (m *Manager) Shutdown() {
 	}
 }
 
+// notify sends a desktop notification; failures are irrelevant.
+func notify(title, body string) {
+	go exec.Command("notify-send", "-a", "dm", "-i", "folder-download", title, body).Run()
+}
+
 func newID() string {
 	b := make([]byte, 4)
 	rand.Read(b)
@@ -133,6 +139,11 @@ func (m *Manager) Add(url, filename string, headers map[string]string) (string, 
 	downloader.Save(config.JobsDir(), j)
 	m.schedule()
 	m.broadcast()
+	name := filename
+	if name == "" {
+		name = url
+	}
+	notify("Download started", name)
 	return j.ID, nil
 }
 
@@ -245,8 +256,12 @@ func (m *Manager) runJob(j *downloader.Job) {
 		m.remove(j)
 	} else {
 		downloader.Save(config.JobsDir(), j)
-		if j.GetState() == downloader.StateDone {
+		switch j.GetState() {
+		case downloader.StateDone:
+			notify("Download finished", j.Filename)
 			m.pruneDone()
+		case downloader.StateFailed:
+			notify("Download failed", j.Filename+": "+j.Error)
 		}
 	}
 	m.schedule()
