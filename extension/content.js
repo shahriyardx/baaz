@@ -121,7 +121,11 @@
     menu = document.createElement("div");
     Object.assign(menu.style, {
       display: "none",
-      marginTop: "6px",
+      // right-aligned under the button so it opens leftward, staying on
+      // the video instead of spilling past its right edge
+      position: "absolute",
+      right: "0",
+      top: "calc(100% + 6px)",
       minWidth: "170px",
       background: "rgba(17, 20, 26, .92)",
       backdropFilter: "blur(12px)",

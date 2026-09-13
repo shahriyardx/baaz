@@ -46,6 +46,8 @@ var (
 	ytMergeRe    = regexp.MustCompile(`\[Merger\] Merging formats into "(.+)"`)
 	ytExtractRe  = regexp.MustCompile(`\[ExtractAudio\] Destination: (.+)$`)
 	ytAlreadyRe  = regexp.MustCompile(`\[download\] (.+) has already been downloaded`)
+	// temp-path workflow: the finished file's real home is announced here
+	ytMoveRe = regexp.MustCompile(`\[MoveFiles\] Moving file "(.+)" to "(.+)"`)
 )
 
 // runYtdlp delegates a media-page URL to yt-dlp, translating its progress
@@ -146,6 +148,12 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 			j.Filename = filepath.Base(lastPath)
 			j.mu.Unlock()
 		}
+		if m := ytMoveRe.FindStringSubmatch(line); m != nil {
+			lastPath = strings.TrimSpace(m[2])
+			j.mu.Lock()
+			j.Filename = filepath.Base(lastPath)
+			j.mu.Unlock()
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -159,10 +167,23 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 		atomic.StoreInt64(&seg.Written, j.Total)
 	}
 	if lastPath != "" {
+		// Never leave FinalPath pointing into the hidden temp dir: if the
+		// announced path lives there, the finished file is its basename in
+		// the real output dir.
+		if strings.HasPrefix(lastPath, tmpDir) {
+			if moved := filepath.Join(outDir, filepath.Base(lastPath)); fileExists(moved) {
+				lastPath = moved
+			}
+		}
 		j.FinalPath = lastPath
 	}
 	j.mu.Unlock()
 	return nil
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }
 
 // formatArgs maps a quality preset to yt-dlp flags. Quality uses -S res
