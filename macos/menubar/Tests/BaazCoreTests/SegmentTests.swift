@@ -95,9 +95,10 @@ final class SegmentTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         }
 
-        // Sweep the row band rather than pinning one magic coordinate.
+        // Sweep the whole upper panel rather than pinning magic coordinates —
+        // font metrics shift the row between runners.
         var toggled = false
-        for y in stride(from: CGFloat(110), through: 160, by: 6) where !toggled {
+        for y in stride(from: CGFloat(60), through: 260, by: 4) where !toggled {
             click(NSPoint(x: 90, y: y))
             if model.isExpanded("a1") { toggled = true }
         }

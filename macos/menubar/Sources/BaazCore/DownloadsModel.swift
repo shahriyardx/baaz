@@ -43,8 +43,12 @@ public final class DownloadsModel: ObservableObject {
     }
 
     var statusLine: String {
-        if cliMissing { return "baaz command not found" }
-        if !daemonUp { return "daemon starting…" }
+        // A live snapshot outranks the static binary check: data is flowing,
+        // so whatever launched the stream clearly works.
+        if !daemonUp {
+            if cliMissing { return "baaz command not found" }
+            return "daemon starting…"
+        }
         if !settings.intercept { return "intercept off — Chrome downloads normally" }
         if activeCount > 0 { return "\(activeCount) active · \(human(snapshot.totalSpeed))/s" }
         if !jobs.isEmpty { return "\(jobs.count) waiting" }
