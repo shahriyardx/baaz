@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "baaz \u2014 download manager",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Hands browser downloads to the baaz download daemon",
   "background": {
     "service_worker": "background.js"
@@ -17,15 +17,30 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "baaz"
+    "default_title": "baaz",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }
   ],
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn4Q4UQ5HSNVNBgJyL8padFRQrHOnSsNKKqtmQxEqOaUqvTG1xtS5ZIzo1N7jZxNF3Y59GIQx07A2FCSRORMHykYTQD6dnD29VsEr1v8XTJuhdW1XrxY12MCi3h6om8/tT6zu1fkAXe8iArxNMIhGHWi5slb6/C44r7h/dd5LyqLgkGYrpeKZSihr81DoUVWt/6cErxTafVpEJ9riKiIKLN5Ll6X+uNIaWLARlVBzIPGK2+P26DGXLyKsR9R5pE/INK0/FbhoVwUx/Zagktee6949SCXZoaql2j7RP+DXQUDpDS6W2OKIKueFhKfQn1jR9SQcQXVxG+wRvqdEdqGD3QIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn4Q4UQ5HSNVNBgJyL8padFRQrHOnSsNKKqtmQxEqOaUqvTG1xtS5ZIzo1N7jZxNF3Y59GIQx07A2FCSRORMHykYTQD6dnD29VsEr1v8XTJuhdW1XrxY12MCi3h6om8/tT6zu1fkAXe8iArxNMIhGHWi5slb6/C44r7h/dd5LyqLgkGYrpeKZSihr81DoUVWt/6cErxTafVpEJ9riKiIKLN5Ll6X+uNIaWLARlVBzIPGK2+P26DGXLyKsR9R5pE/INK0/FbhoVwUx/Zagktee6949SCXZoaql2j7RP+DXQUDpDS6W2OKIKueFhKfQn1jR9SQcQXVxG+wRvqdEdqGD3QIDAQAB",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
