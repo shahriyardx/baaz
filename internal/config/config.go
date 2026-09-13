@@ -13,15 +13,38 @@ type Config struct {
 	DownloadDir  string `json:"downloadDir"`
 	MaxActive    int    `json:"maxActive"`
 	MinSplitSize int64  `json:"minSplitSize"`
+	Intercept    *bool  `json:"intercept,omitempty"` // pointer: absent = true
+	MinSizeMB    int    `json:"minSizeMB"`
 }
 
 func Default() *Config {
+	t := true
 	return &Config{
 		Segments:     8,
 		DownloadDir:  "~/Downloads",
 		MaxActive:    3,
 		MinSplitSize: 1 << 20, // 1 MiB
+		Intercept:    &t,
+		MinSizeMB:    5,
 	}
+}
+
+func (c *Config) InterceptOn() bool { return c.Intercept == nil || *c.Intercept }
+
+func (c *Config) SetIntercept(v bool) { c.Intercept = &v }
+
+// Save persists the config for the next daemon start; live values are
+// applied by the daemon directly.
+func (c *Config) Save() error {
+	dir := configDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "config.json"), append(data, '\n'), 0o644)
 }
 
 // Load reads ~/.config/dm/config.json, falling back to defaults for any

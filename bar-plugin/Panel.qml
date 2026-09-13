@@ -83,6 +83,12 @@ Panel {
     if (p) p.running = true
   }
 
+  readonly property var cfg: (snapshot && snapshot.settings) ? snapshot.settings : ({})
+
+  function setCfg(key, value) {
+    act("config", key + " " + value)
+  }
+
   Component {
     id: actProc
     Process {
@@ -166,29 +172,52 @@ Panel {
         spacing: Style.space(10)
 
         // ---------- Header ----------
-        Column {
+        Item {
           width: parent.width
-          spacing: Style.space(2)
+          implicitHeight: headerCol.implicitHeight
 
-          Text {
-            text: "Downloads"
-            color: Color.foreground
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-            font.bold: true
+          Column {
+            id: headerCol
+            anchors.left: parent.left
+            anchors.right: interceptToggle.left
+            anchors.rightMargin: Style.space(8)
+            spacing: Style.space(2)
+
+            Text {
+              text: "Downloads"
+              color: Color.foreground
+              font.family: Style.font.family
+              font.pixelSize: Style.font.body
+              font.bold: true
+            }
+
+            Text {
+              text: {
+                if (!root.daemonUp) return "daemon starting…"
+                if (root.cfg.intercept === false) return "intercept off — Chrome downloads normally"
+                if (root.activeCount > 0) return root.activeCount + " active · " + root.human(root.snapshot.totalSpeed) + "/s"
+                if (root.liveJobs.length > 0) return root.liveJobs.length + " waiting"
+                return "idle"
+              }
+              color: Color.foreground
+              opacity: 0.55
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
           }
 
-          Text {
-            text: {
-              if (!root.daemonUp) return "daemon starting…"
-              if (root.activeCount > 0) return root.activeCount + " active · " + root.human(root.snapshot.totalSpeed) + "/s"
-              if (root.liveJobs.length > 0) return root.liveJobs.length + " waiting"
-              return "idle"
+          ToggleSwitch {
+            id: interceptToggle
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: root.cfg.intercept !== false
+            foreground: Color.foreground
+            onToggled: root.setCfg("intercept", root.cfg.intercept === false ? "true" : "false")
+
+            PanelToolTip {
+              visible: interceptToggle.containsMouse
+              text: "Take over Chrome downloads"
             }
-            color: Color.foreground
-            opacity: 0.55
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption
           }
         }
 
@@ -395,6 +424,78 @@ Panel {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.openFolder(doneRow.modelData)
+              }
+            }
+          }
+        }
+
+        PanelSeparator { width: parent.width }
+
+        // ---------- Settings ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(2)
+
+          PanelSectionHeader {
+            text: "Settings"
+            foreground: Color.foreground
+          }
+
+          Repeater {
+            model: [
+              { label: "Parallel downloads", key: "max-active", value: root.cfg.maxActive || 0, min: 1, max: 10, step: 1, unit: "" },
+              { label: "Segments per file", key: "segments", value: root.cfg.segments || 0, min: 1, max: 16, step: 1, unit: "" },
+              { label: "Min size to grab", key: "min-size", value: root.cfg.minSizeMB !== undefined ? root.cfg.minSizeMB : 0, min: 0, max: 500, step: 5, unit: " MB" },
+            ]
+
+            Item {
+              id: cfgRow
+              required property var modelData
+              width: parent.width
+              implicitHeight: Style.space(24)
+
+              Text {
+                anchors.left: parent.left
+                anchors.leftMargin: Style.space(6)
+                anchors.verticalCenter: parent.verticalCenter
+                text: cfgRow.modelData.label
+                color: Color.foreground
+                opacity: 0.7
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
+
+              Row {
+                anchors.right: parent.right
+                anchors.rightMargin: Style.space(6)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(6)
+
+                PanelActionButton {
+                  iconText: ""
+                  tooltipText: "Less"
+                  foreground: Color.foreground
+                  enabled: cfgRow.modelData.value > cfgRow.modelData.min
+                  onClicked: root.setCfg(cfgRow.modelData.key,
+                    Math.max(cfgRow.modelData.min, cfgRow.modelData.value - cfgRow.modelData.step))
+                }
+
+                Text {
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: cfgRow.modelData.value + cfgRow.modelData.unit
+                  color: Color.foreground
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                }
+
+                PanelActionButton {
+                  iconText: ""
+                  tooltipText: "More"
+                  foreground: Color.foreground
+                  enabled: cfgRow.modelData.value < cfgRow.modelData.max
+                  onClicked: root.setCfg(cfgRow.modelData.key,
+                    Math.min(cfgRow.modelData.max, cfgRow.modelData.value + cfgRow.modelData.step))
+                }
               }
             }
           }

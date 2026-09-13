@@ -11,11 +11,13 @@ import (
 // Backend is what the socket server needs from the daemon.
 type Backend interface {
 	Add(url, filename string, headers map[string]string) (string, error)
+	AddBrowser(url, filename string, headers map[string]string, size int64) (string, error)
 	Pause(id string) error
 	Resume(id string) error
 	Cancel(id string) error
 	Snapshot() *Snapshot
 	Subscribe() (<-chan *Snapshot, func())
+	SetSettings(kv map[string]string) error
 }
 
 type Server struct {
@@ -87,6 +89,19 @@ func (s *Server) dispatch(req *Request) Response {
 			return Response{OK: false, Error: err.Error()}
 		}
 		return Response{OK: true, ID: id}
+	case "add-browser":
+		id, err := s.backend.AddBrowser(req.URL, req.Filename, req.Headers, req.Size)
+		if err != nil {
+			return Response{OK: false, Error: err.Error()}
+		}
+		return Response{OK: true, ID: id}
+	case "setconfig":
+		if err := s.backend.SetSettings(req.Settings); err != nil {
+			return Response{OK: false, Error: err.Error()}
+		}
+		return Response{OK: true, Snapshot: s.backend.Snapshot()}
+	case "getconfig":
+		return Response{OK: true, Snapshot: s.backend.Snapshot()}
 	case "pause":
 		return errResp(s.backend.Pause(req.ID))
 	case "resume":

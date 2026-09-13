@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -116,6 +117,22 @@ func newID() string {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// AddBrowser is the extension's entry point: it enforces intercept and
+// min-size policy so a rejection falls back to a plain browser download.
+func (m *Manager) AddBrowser(url, filename string, headers map[string]string, size int64) (string, error) {
+	m.mu.Lock()
+	on := m.cfg.InterceptOn()
+	minBytes := int64(m.cfg.MinSizeMB) << 20
+	m.mu.Unlock()
+	if !on {
+		return "", fmt.Errorf("%sintercept is off", ipc.ErrRejected)
+	}
+	if size > 0 && size < minBytes {
+		return "", fmt.Errorf("%sbelow min size", ipc.ErrRejected)
+	}
+	return m.Add(url, filename, headers)
 }
 
 func (m *Manager) Add(url, filename string, headers map[string]string) (string, error) {
@@ -361,7 +378,16 @@ func (m *Manager) speedOf(id string) int64 {
 func (m *Manager) Snapshot() *ipc.Snapshot {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	snap := &ipc.Snapshot{Type: "snapshot", Jobs: []ipc.JobInfo{}, Recent: []ipc.JobInfo{}}
+	snap := &ipc.Snapshot{
+		Type: "snapshot", Jobs: []ipc.JobInfo{}, Recent: []ipc.JobInfo{},
+		Settings: ipc.Settings{
+			Intercept:   m.cfg.InterceptOn(),
+			Segments:    m.cfg.Segments,
+			MaxActive:   m.cfg.MaxActive,
+			MinSizeMB:   m.cfg.MinSizeMB,
+			DownloadDir: m.cfg.DownloadDir,
+		},
+	}
 	var recent []*downloader.Job
 	for _, id := range m.order {
 		j := m.jobs[id]
@@ -415,6 +441,55 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 		info.ETA = (info.Total - info.Done) / info.Speed
 	}
 	return info
+}
+
+// Settings returns the live configuration.
+func (m *Manager) Settings() ipc.Settings {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return ipc.Settings{
+		Intercept:   m.cfg.InterceptOn(),
+		Segments:    m.cfg.Segments,
+		MaxActive:   m.cfg.MaxActive,
+		MinSizeMB:   m.cfg.MinSizeMB,
+		DownloadDir: m.cfg.DownloadDir,
+	}
+}
+
+// SetSettings applies key/value updates live, persists them, and broadcasts.
+func (m *Manager) SetSettings(kv map[string]string) error {
+	m.mu.Lock()
+	for k, v := range kv {
+		switch k {
+		case "intercept":
+			m.cfg.SetIntercept(v == "true" || v == "on" || v == "1")
+		case "segments":
+			if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 32 {
+				m.cfg.Segments = n
+				m.eng.Segments = n
+			}
+		case "max-active", "maxActive":
+			if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
+				m.cfg.MaxActive = n
+			}
+		case "min-size", "minSizeMB":
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				m.cfg.MinSizeMB = n
+			}
+		case "dir", "downloadDir":
+			if v != "" {
+				m.cfg.DownloadDir = v
+			}
+		default:
+			m.mu.Unlock()
+			return fmt.Errorf("unknown setting: %s (intercept|segments|max-active|min-size|dir)", k)
+		}
+	}
+	err := m.cfg.Save()
+	m.mu.Unlock()
+	m.schedule() // a raised max-active may free slots
+	m.broadcast()
+	return err
 }
 
 // Subscribe registers a watch channel; the returned func unsubscribes.

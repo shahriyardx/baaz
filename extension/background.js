@@ -7,7 +7,7 @@
 const HOST = "com.shahriyar.dm";
 const NATIVE_TIMEOUT_MS = 3000;
 
-const DEFAULTS = { enabled: true, minSizeMB: 5 };
+const DEFAULTS = { enabled: true };
 
 function getSettings() {
   return chrome.storage.local.get(DEFAULTS);
@@ -59,15 +59,17 @@ async function intercept(item) {
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url)) return; // blob:, data:, filesystem:, chrome: stay in the browser
   if (item.byExtensionId) return; // another extension's download
-  const minBytes = (settings.minSizeMB || 0) * 1024 * 1024;
-  if (item.fileSize > 0 && item.fileSize < minBytes) return;
-  if (item.totalBytes > 0 && item.totalBytes < minBytes) return;
+
+  // Size and policy (intercept on/off, min size) are the daemon's call —
+  // a "rejected" reply means "let the browser download it", silently.
+  const fileSize = item.fileSize > 0 ? item.fileSize : (item.totalBytes > 0 ? item.totalBytes : 0);
 
   let reply;
   try {
     reply = await sendNative({
       type: "add",
       url,
+      fileSize,
       filename: basename(item.filename),
       cookies: await cookieHeaderFor(url),
       referrer: item.referrer || "",
@@ -79,7 +81,8 @@ async function intercept(item) {
     return;
   }
   if (!reply || !reply.ok) {
-    console.warn("dm rejected download:", reply && reply.error);
+    if (reply && reply.rejected) return; // intercept off or below min size
+    console.warn("dm error:", reply && reply.error);
     flagFallback();
     return;
   }

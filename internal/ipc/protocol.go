@@ -4,12 +4,27 @@
 package ipc
 
 type Request struct {
-	Cmd      string            `json:"cmd"` // add|list|pause|resume|cancel|status|watch|ping
+	Cmd      string            `json:"cmd"` // add|list|pause|resume|cancel|status|watch|ping|getconfig|setconfig
 	URL      string            `json:"url,omitempty"`
 	Filename string            `json:"filename,omitempty"`
 	Headers  map[string]string `json:"headers,omitempty"`
 	ID       string            `json:"id,omitempty"`
+	Size     int64             `json:"size,omitempty"`     // advertised size, for min-size policy
+	Settings map[string]string `json:"settings,omitempty"` // setconfig: key -> value
 }
+
+// Settings is the daemon-owned configuration exposed to every UI.
+type Settings struct {
+	Intercept   bool   `json:"intercept"`
+	Segments    int    `json:"segments"`
+	MaxActive   int    `json:"maxActive"`
+	MinSizeMB   int    `json:"minSizeMB"`
+	DownloadDir string `json:"downloadDir"`
+}
+
+// ErrRejected marks policy rejections (intercept off, below min size) so the
+// extension can fall back to a plain browser download silently.
+const ErrRejected = "rejected: "
 
 type Response struct {
 	OK       bool      `json:"ok"`
@@ -38,4 +53,5 @@ type Snapshot struct {
 	TotalSpeed int64     `json:"totalSpeed"`
 	Jobs       []JobInfo `json:"jobs"`   // queued/active/paused/failed
 	Recent     []JobInfo `json:"recent"` // last 10 completed
+	Settings   Settings  `json:"settings"`
 }

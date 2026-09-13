@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"dm/internal/config"
 	"dm/internal/ipc"
@@ -23,13 +24,16 @@ type inMessage struct {
 	Referrer  string `json:"referrer,omitempty"`
 	UserAgent string `json:"userAgent,omitempty"`
 	ID        string `json:"id,omitempty"`
+	FileSize  int64  `json:"fileSize,omitempty"`
 }
 
 type outMessage struct {
-	OK     bool   `json:"ok"`
-	Error  string `json:"error,omitempty"`
-	ID     string `json:"id,omitempty"`
-	Active int    `json:"active,omitempty"`
+	OK        bool   `json:"ok"`
+	Error     string `json:"error,omitempty"`
+	Rejected  bool   `json:"rejected,omitempty"` // policy skip, not a failure
+	ID        string `json:"id,omitempty"`
+	Active    int    `json:"active,omitempty"`
+	Intercept bool   `json:"intercept"`
 }
 
 // Run services one Chrome connection until stdin EOF.
@@ -66,7 +70,7 @@ func handle(msg *inMessage) outMessage {
 		if msg.UserAgent != "" {
 			headers["User-Agent"] = msg.UserAgent
 		}
-		req = &ipc.Request{Cmd: "add", URL: msg.URL, Filename: msg.Filename, Headers: headers}
+		req = &ipc.Request{Cmd: "add-browser", URL: msg.URL, Filename: msg.Filename, Headers: headers, Size: msg.FileSize}
 	case "ping":
 		req = &ipc.Request{Cmd: "ping"}
 	case "cancel":
@@ -80,8 +84,12 @@ func handle(msg *inMessage) outMessage {
 		return outMessage{OK: false, Error: err.Error()}
 	}
 	out := outMessage{OK: resp.OK, Error: resp.Error, ID: resp.ID}
+	if strings.HasPrefix(resp.Error, ipc.ErrRejected) {
+		out.Rejected = true
+	}
 	if resp.Snapshot != nil {
 		out.Active = resp.Snapshot.Active
+		out.Intercept = resp.Snapshot.Settings.Intercept
 	}
 	return out
 }

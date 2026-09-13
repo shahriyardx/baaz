@@ -29,6 +29,9 @@ Usage:
   dm add URL [--out NAME]     queue a download (starts daemon if needed)
   dm ls                       list downloads
   dm pause|resume|cancel ID   control a download
+  dm on | off                 enable / disable Chrome interception
+  dm config [KEY VALUE]       show or change settings
+                              keys: intercept segments max-active min-size dir
   dm status [--json]          one-shot status (--json = snapshot schema)
   dm watch                    stream JSON snapshots (for the bar widget)
   dm daemon                   run the daemon in the foreground
@@ -65,6 +68,12 @@ func main() {
 		err = cmdWatch()
 	case "pause", "resume", "cancel":
 		err = cmdControl(os.Args[1], os.Args[2:])
+	case "on":
+		err = cmdConfig([]string{"intercept", "true"})
+	case "off":
+		err = cmdConfig([]string{"intercept", "false"})
+	case "config":
+		err = cmdConfig(os.Args[2:])
 	case "install-chrome":
 		err = cmdInstallChrome(os.Args[2:])
 	case "help", "-h", "--help":
@@ -165,6 +174,35 @@ func cmdControl(cmd string, args []string) error {
 	if !resp.OK {
 		return fmt.Errorf("%s", resp.Error)
 	}
+	return nil
+}
+
+func cmdConfig(args []string) error {
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	req := &ipc.Request{Cmd: "getconfig"}
+	if len(args) == 2 {
+		req = &ipc.Request{Cmd: "setconfig", Settings: map[string]string{args[0]: args[1]}}
+	} else if len(args) != 0 {
+		return fmt.Errorf("usage: dm config [KEY VALUE]")
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("%s", resp.Error)
+	}
+	s := resp.Snapshot.Settings
+	state := "off"
+	if s.Intercept {
+		state = "on"
+	}
+	fmt.Printf("intercept   %s\nsegments    %d\nmax-active  %d\nmin-size    %d MB\ndir         %s\n",
+		state, s.Segments, s.MaxActive, s.MinSizeMB, s.DownloadDir)
 	return nil
 }
 
