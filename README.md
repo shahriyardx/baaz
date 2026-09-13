@@ -63,6 +63,26 @@ baaz install-bar
 
 ---
 
+## Updating
+
+```
+yay -Syu baaz            # Arch / Omarchy
+```
+
+Other Linux: run the same curl line from Install again — it fetches the
+latest version.
+
+Then refresh the browser side (the new extension ships inside baaz):
+
+```
+sudo baaz install-chrome
+```
+
+and restart Chrome (`chrome://restart`). Chrome swaps in the new extension
+by itself — no prompts, no developer mode.
+
+---
+
 ## How to use it
 
 You mostly don't have to do anything:
