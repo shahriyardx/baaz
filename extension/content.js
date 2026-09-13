@@ -2,13 +2,17 @@
 // Direct http(s) sources download in one click; on known media sites
 // (YouTube etc., where the player only has a blob stream) the page URL is
 // sent instead and a quality menu is offered — the daemon runs yt-dlp.
+//
+// Visibility is decided by one watcher loop over the cursor position
+// (elementsFromPoint pierces player overlays): over video or control =
+// visible, over neither = hidden, idle 2.5s = faded like native controls.
 
 (() => {
   let wrap = null;
   let menu = null;
   let currentVideo = null;
-  let hideTimer = 0;
   let pageMode = false;
+  let lastX = -1, lastY = -1, lastMove = 0;
 
   // Keep in sync with mediaHosts in internal/downloader/ytdlp.go.
   const MEDIA_HOSTS = [
@@ -60,8 +64,6 @@
       fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
       WebkitFontSmoothing: "antialiased",
     });
-    wrap.addEventListener("mouseenter", () => clearTimeout(hideTimer));
-    wrap.addEventListener("mouseleave", scheduleHide);
 
     const btn = document.createElement("div");
     btn.id = "baaz-btn";
@@ -81,7 +83,7 @@
       boxShadow: "0 4px 14px rgba(0,0,0,.35)",
       cursor: "pointer",
       userSelect: "none",
-      transition: "background .12s, transform .12s",
+      transition: "background .12s",
     });
     btn.addEventListener("mouseenter", () => { btn.style.background = "rgba(35, 40, 50, .92)"; });
     btn.addEventListener("mouseleave", () => { btn.style.background = "rgba(17, 20, 26, .78)"; });
@@ -179,50 +181,38 @@
     menu.style.display = "none";
   }
 
-  // Fade out like native player controls: idle cursor hides the button,
-  // unless the quality menu is open or the cursor sits on the control.
-  let idleTimer = 0;
-  function armIdleHide() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-      const menuOpen = menu && menu.style.display !== "none";
-      const onControl = wrap && wrap.matches(":hover");
-      if (!menuOpen && !onControl) hideUI();
-    }, 2500);
+  function cursorStack() {
+    if (lastX < 0) return [];
+    try {
+      return document.elementsFromPoint(lastX, lastY);
+    } catch {
+      return [];
+    }
   }
 
-  function scheduleHide() {
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(hideUI, 450);
-  }
-
-  // Players (Facebook, YouTube) stack invisible overlays above the <video>,
-  // so hover targets are never the video itself. elementsFromPoint pierces
-  // the whole stack under the cursor.
-  let lastCheck = 0;
   document.addEventListener("mousemove", (e) => {
-    const now = Date.now();
-    if (now - lastCheck < 150) return;
-    lastCheck = now;
-    if (wrap && e.target instanceof Node && wrap.contains(e.target)) {
-      clearTimeout(hideTimer);
-      return;
-    }
-    const stack = document.elementsFromPoint(e.clientX, e.clientY);
-    const v = stack.find((el) => el instanceof HTMLVideoElement);
-    if (v) {
-      clearTimeout(hideTimer);
-      showFor(v);
-      armIdleHide();
-    } else if (wrap && wrap.style.display !== "none") {
-      scheduleHide();
-    }
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastMove = Date.now();
   }, true);
 
+  // The watcher: sole owner of show/hide, immune to event-timing races.
+  setInterval(() => {
+    const stack = cursorStack();
+    const overControl = wrap && stack.some((el) => wrap.contains(el));
+    const video = stack.find((el) => el instanceof HTMLVideoElement);
+    const menuOpen = menu && menu.style.display !== "none";
+    const visible = wrap && wrap.style.display !== "none";
+
+    if (overControl) return; // never yank the control out from under the cursor
+    if (video) {
+      showFor(video);
+      if (visible && !menuOpen && Date.now() - lastMove > 2500) hideUI(); // idle fade
+      return;
+    }
+    if (visible && !menuOpen) hideUI(); // over neither video nor control
+  }, 250);
+
   window.addEventListener("scroll", hideUI, true);
-  // No capture: mouseleave does not bubble, so without capture this fires
-  // only when the cursor leaves the document itself (the window edge) —
-  // with capture it fired for every element left, hiding the button the
-  // moment the cursor moved from the video onto it.
   document.addEventListener("mouseleave", hideUI);
 })();
