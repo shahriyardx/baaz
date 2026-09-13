@@ -28,7 +28,9 @@ func Dial(socketPath, logPath string, autoStart bool) (*Client, error) {
 	if !autoStart {
 		return nil, err
 	}
-	os.Remove(socketPath) // stale socket from a dead daemon
+	// Never remove the socket here: a concurrent client could sever a daemon
+	// that just came up. The daemon clears stale sockets itself, under its
+	// single-instance lock.
 	if err := spawnDaemon(logPath); err != nil {
 		return nil, fmt.Errorf("start daemon: %w", err)
 	}

@@ -23,8 +23,10 @@ type Server struct {
 	ln      net.Listener
 }
 
+// NewServer binds the socket. The caller must hold the daemon's single-
+// instance lock first — that is what makes removing a stale socket safe.
 func NewServer(socketPath string, backend Backend) (*Server, error) {
-	os.Remove(socketPath) // caller has already verified no live daemon owns it
+	os.Remove(socketPath)
 	ln, err := net.Listen("unix", socketPath)
 	if err != nil {
 		return nil, err
