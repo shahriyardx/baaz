@@ -22,6 +22,7 @@ Panel {
   // Last snapshot from `baaz watch`: { active, totalSpeed, jobs, recent }
   property var snapshot: ({ active: 0, totalSpeed: 0, jobs: [], recent: [] })
   property bool daemonUp: false
+  property bool settingsView: false
 
   readonly property var liveJobs: (snapshot && snapshot.jobs) ? snapshot.jobs : []
   readonly property var recentJobs: (snapshot && snapshot.recent) ? snapshot.recent : []
@@ -150,6 +151,8 @@ Panel {
     }
   }
 
+  onOpenedChanged: if (opened) settingsView = false
+
   KeyboardPanel {
     id: panel
     anchorItem: button
@@ -179,7 +182,7 @@ Panel {
           Column {
             id: headerCol
             anchors.left: parent.left
-            anchors.right: interceptToggle.left
+            anchors.right: gearBtn.left
             anchors.rightMargin: Style.space(8)
             spacing: Style.space(2)
 
@@ -206,6 +209,17 @@ Panel {
             }
           }
 
+          PanelActionButton {
+            id: gearBtn
+            anchors.right: interceptToggle.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            iconText: root.settingsView ? "\uf053" : "\uf013"
+            tooltipText: root.settingsView ? "Back" : "Settings"
+            foreground: Color.foreground
+            onClicked: root.settingsView = !root.settingsView
+          }
+
           ToggleSwitch {
             id: interceptToggle
             anchors.right: parent.right
@@ -225,7 +239,7 @@ Panel {
 
         Text {
           width: parent.width
-          visible: root.liveJobs.length === 0 && root.recentJobs.length === 0
+          visible: !root.settingsView && root.liveJobs.length === 0 && root.recentJobs.length === 0
           text: "Nothing yet — downloads from Chrome land here."
           wrapMode: Text.WordWrap
           color: Color.foreground
@@ -238,7 +252,7 @@ Panel {
         Column {
           width: parent.width
           spacing: Style.space(6)
-          visible: root.liveJobs.length > 0
+          visible: !root.settingsView && root.liveJobs.length > 0
 
           Repeater {
             model: root.liveJobs
@@ -358,14 +372,14 @@ Panel {
 
         PanelSeparator {
           width: parent.width
-          visible: root.liveJobs.length > 0 && root.recentJobs.length > 0
+          visible: !root.settingsView && root.liveJobs.length > 0 && root.recentJobs.length > 0
         }
 
         // ---------- Recent ----------
         Column {
           width: parent.width
           spacing: Style.space(2)
-          visible: root.recentJobs.length > 0
+          visible: !root.settingsView && root.recentJobs.length > 0
 
           PanelSectionHeader {
             text: "Recent"
@@ -429,12 +443,11 @@ Panel {
           }
         }
 
-        PanelSeparator { width: parent.width }
-
-        // ---------- Settings ----------
+        // ---------- Settings page ----------
         Column {
           width: parent.width
           spacing: Style.space(2)
+          visible: root.settingsView
 
           PanelSectionHeader {
             text: "Settings"
