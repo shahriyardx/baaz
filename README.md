@@ -24,11 +24,13 @@ make install-plugin    # installs + enables the bar widget
 
 Chrome extension:
 
-1. chrome://extensions → Developer mode → "Load unpacked" → pick `extension/`.
-2. Copy the extension ID it shows.
-3. `dm install-chrome --ext-id <ID>` (writes the native-messaging manifest for
-   Chrome and Chromium).
-4. Restart Chrome.
+1. `dm install-chrome` (the extension ID is fixed by the `key` pinned in
+   `extension/manifest.json`, so no ID needs to be typed).
+2. chrome://extensions → Developer mode → "Load unpacked" → pick `extension/`.
+3. Restart Chrome.
+
+The signing key lives in `keys/extension-key.pem` (gitignored) — only needed
+again for a future Chrome Web Store upload.
 
 ## CLI
 

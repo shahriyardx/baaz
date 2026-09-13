@@ -1,10 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "dm — download manager",
+  "name": "dm \u2014 download manager",
   "version": "0.1.0",
   "description": "Hands browser downloads to the dm segmented download daemon",
-  "background": { "service_worker": "background.js" },
-  "permissions": ["downloads", "cookies", "nativeMessaging", "storage"],
-  "host_permissions": ["<all_urls>"],
-  "action": { "default_popup": "popup.html", "default_title": "dm" }
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "downloads",
+    "cookies",
+    "nativeMessaging",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "dm"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn4Q4UQ5HSNVNBgJyL8padFRQrHOnSsNKKqtmQxEqOaUqvTG1xtS5ZIzo1N7jZxNF3Y59GIQx07A2FCSRORMHykYTQD6dnD29VsEr1v8XTJuhdW1XrxY12MCi3h6om8/tT6zu1fkAXe8iArxNMIhGHWi5slb6/C44r7h/dd5LyqLgkGYrpeKZSihr81DoUVWt/6cErxTafVpEJ9riKiIKLN5Ll6X+uNIaWLARlVBzIPGK2+P26DGXLyKsR9R5pE/INK0/FbhoVwUx/Zagktee6949SCXZoaql2j7RP+DXQUDpDS6W2OKIKueFhKfQn1jR9SQcQXVxG+wRvqdEdqGD3QIDAQAB"
 }
