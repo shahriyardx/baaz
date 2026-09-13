@@ -493,6 +493,31 @@ Panel {
             foreground: Color.foreground
           }
 
+          Item {
+            width: parent.width
+            implicitHeight: Style.space(24)
+
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Sort into category folders"
+              color: Color.foreground
+              opacity: 0.7
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            ToggleSwitch {
+              anchors.right: parent.right
+              anchors.rightMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
+              checked: root.cfg.categorize !== false
+              foreground: Color.foreground
+              onToggled: root.setCfg("categorize", root.cfg.categorize === false ? "true" : "false")
+            }
+          }
+
           Repeater {
             model: [
               { label: "Parallel downloads", key: "max-active", value: root.cfg.maxActive || 0, min: 1, max: 10, step: 1, unit: "" },

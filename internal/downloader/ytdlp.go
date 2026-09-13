@@ -66,8 +66,26 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 
 	// .120B truncates the title to 120 bytes: Facebook uses whole captions
 	// as titles, which blow past the 255-byte filename limit.
-	outTmpl := filepath.Join(j.Dir, "%(title).120B [%(id)s].%(ext)s")
-	args := []string{"--newline", "--no-playlist", "-c", "-o", outTmpl}
+	outDir := j.Dir
+	if j.Categorize {
+		cat := "Videos"
+		if j.Format == "audio" {
+			cat = "Music"
+		}
+		outDir = filepath.Join(j.Dir, "baaz", cat)
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
+			return err
+		}
+	}
+	tmpDir := filepath.Join(j.Dir, ".baaz-tmp")
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+		return err
+	}
+	// temp path keeps .part/.ytdl clutter out of the visible folder; the
+	// finished file lands in the home path.
+	args := []string{"--newline", "--no-playlist", "-c",
+		"-P", "home:" + outDir, "-P", "temp:" + tmpDir,
+		"-o", "%(title).120B [%(id)s].%(ext)s"}
 	args = append(args, formatArgs(j.Format)...)
 	args = append(args, j.URL)
 	cmd := exec.CommandContext(ctx, "yt-dlp", args...)

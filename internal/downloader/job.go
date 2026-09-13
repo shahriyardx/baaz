@@ -53,6 +53,7 @@ type Job struct {
 	NoRange     bool              `json:"noRange,omitempty"` // single-stream job (no usable Range support)
 	Kind        string            `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp
 	Format      string            `json:"format,omitempty"`  // media preset: best|1080|720|480|audio
+	Categorize  bool              `json:"categorize,omitempty"` // sort into <dir>/baaz/<Category>
 
 	mu        sync.Mutex
 	cancel    context.CancelFunc
@@ -101,8 +102,13 @@ func (j *Job) Stop() {
 	}
 }
 
+// In-flight files live in a hidden dir inside the download root: invisible
+// in the file manager, yet on the same filesystem so the final rename is
+// instant.
+func (j *Job) tmpDir() string { return filepath.Join(j.Dir, ".baaz-tmp") }
+
 func (j *Job) partPath() string {
-	return filepath.Join(j.Dir, fmt.Sprintf(".%s.baaz.part", j.ID))
+	return filepath.Join(j.tmpDir(), fmt.Sprintf("%s.part", j.ID))
 }
 
 var errRangeNotSupported = errors.New("server does not honor Range requests")
@@ -188,7 +194,7 @@ func (e *Engine) run(ctx context.Context, j *Job) error {
 	resuming := len(j.Segments) > 0 && pr.Ranged && pr.Total > 0
 	j.mu.Unlock()
 
-	if err := os.MkdirAll(j.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(j.tmpDir(), 0o755); err != nil {
 		if pr.Body != nil {
 			pr.Body.Close()
 		}
@@ -387,14 +393,21 @@ func (j *Job) finish() error {
 	if name == "" {
 		name = "download.bin"
 	}
-	dest := filepath.Join(j.Dir, name)
+	destDir := j.Dir
+	if j.Categorize {
+		destDir = CategorizedDir(j.Dir, name)
+		if err := os.MkdirAll(destDir, 0o755); err != nil {
+			return err
+		}
+	}
+	dest := filepath.Join(destDir, name)
 	ext := filepath.Ext(name)
 	base := name[:len(name)-len(ext)]
 	for i := 1; ; i++ {
 		if _, err := os.Lstat(dest); os.IsNotExist(err) {
 			break
 		}
-		dest = filepath.Join(j.Dir, fmt.Sprintf("%s (%d)%s", base, i, ext))
+		dest = filepath.Join(destDir, fmt.Sprintf("%s (%d)%s", base, i, ext))
 	}
 	if err := os.Rename(j.partPath(), dest); err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
@@ -154,6 +155,9 @@ func (m *Manager) Add(url, filename string, headers map[string]string, format st
 		j.Kind = downloader.KindMedia
 		j.Format = format
 	}
+	m.mu.Lock()
+	j.Categorize = m.cfg.CategorizeOn()
+	m.mu.Unlock()
 	m.mu.Lock()
 	m.jobs[j.ID] = j
 	m.order = append(m.order, j.ID)
@@ -456,6 +460,7 @@ func (m *Manager) Snapshot() *ipc.Snapshot {
 			MaxActive:   m.cfg.MaxActive,
 			MinSizeMB:   m.cfg.MinSizeMB,
 			DownloadDir: m.cfg.DownloadDir,
+			Categorize:  m.cfg.CategorizeOn(),
 		},
 	}
 	var recent []*downloader.Job
@@ -503,6 +508,9 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 	if info.Name == "" {
 		info.Name = j.URL
 	}
+	if j.FinalPath != "" {
+		info.Dir = filepath.Dir(j.FinalPath)
+	}
 	if state == downloader.StateDone {
 		if j.Total > 0 {
 			info.Done = j.Total
@@ -526,6 +534,7 @@ func (m *Manager) Settings() ipc.Settings {
 		MaxActive:   m.cfg.MaxActive,
 		MinSizeMB:   m.cfg.MinSizeMB,
 		DownloadDir: m.cfg.DownloadDir,
+		Categorize:  m.cfg.CategorizeOn(),
 	}
 }
 
@@ -536,6 +545,8 @@ func (m *Manager) SetSettings(kv map[string]string) error {
 		switch k {
 		case "intercept":
 			m.cfg.SetIntercept(v == "true" || v == "on" || v == "1")
+		case "categorize":
+			m.cfg.SetCategorize(v == "true" || v == "on" || v == "1")
 		case "segments":
 			if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 32 {
 				m.cfg.Segments = n
@@ -555,7 +566,7 @@ func (m *Manager) SetSettings(kv map[string]string) error {
 			}
 		default:
 			m.mu.Unlock()
-			return fmt.Errorf("unknown setting: %s (intercept|segments|max-active|min-size|dir)", k)
+			return fmt.Errorf("unknown setting: %s (intercept|categorize|segments|max-active|min-size|dir)", k)
 		}
 	}
 	err := m.cfg.Save()

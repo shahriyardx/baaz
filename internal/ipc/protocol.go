@@ -21,6 +21,7 @@ type Settings struct {
 	MaxActive   int    `json:"maxActive"`
 	MinSizeMB   int    `json:"minSizeMB"`
 	DownloadDir string `json:"downloadDir"`
+	Categorize  bool   `json:"categorize"`
 }
 
 // ErrRejected marks policy rejections (intercept off, below min size) so the
