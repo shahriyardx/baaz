@@ -67,6 +67,25 @@ final class SnapshotTests: XCTestCase {
         XCTAssertEqual(snap.overallPercent, 50, "only sized active jobs count")
     }
 
+    /// The daemon stores the download root with a leading ~ when the user
+    /// set it that way; Finder and NSOpenPanel both need it expanded.
+    @MainActor
+    func testResolvedDownloadDirExpandsTilde() {
+        let model = DownloadsModel()
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+
+        model.ingest(Data((#"{"type":"snapshot","settings":{"downloadDir":"~/Downloads"}}"# + "\n").utf8))
+        XCTAssertEqual(model.resolvedDownloadDir, home + "/Downloads")
+
+        // An absolute path must be left exactly as it is, spaces and all.
+        model.ingest(Data((#"{"type":"snapshot","settings":{"downloadDir":"/Volumes/My Disk/dl"}}"# + "\n").utf8))
+        XCTAssertEqual(model.resolvedDownloadDir, "/Volumes/My Disk/dl")
+
+        // A name merely starting with ~ is not a home reference.
+        model.ingest(Data((#"{"type":"snapshot","settings":{"downloadDir":"~weird"}}"# + "\n").utf8))
+        XCTAssertEqual(model.resolvedDownloadDir, "~weird")
+    }
+
     func testHumanSizes() {
         XCTAssertEqual(human(512), "512B")
         XCTAssertEqual(human(2048), "2KB")

@@ -31,16 +31,29 @@ struct SettingsView: View {
             StepperRow(label: "Min size to grab", key: "min-size",
                        value: model.settings.minSizeMB, range: 0...500, step: 5, unit: " MB")
 
-            if !model.settings.downloadDir.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 2) {
+            Divider()
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
                     Text("Saving to").font(.caption).foregroundStyle(.secondary)
-                    Text(model.settings.downloadDir)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    Spacer()
+                    Button {
+                        model.chooseDownloadDir()
+                    } label: {
+                        Text("Change…")
+                            .font(.caption)
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
                 }
+                Text(model.settings.downloadDir.isEmpty ? "—" : model.settings.downloadDir)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
         }
     }

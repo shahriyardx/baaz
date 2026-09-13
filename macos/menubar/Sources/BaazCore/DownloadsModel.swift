@@ -153,16 +153,42 @@ public final class DownloadsModel: ObservableObject {
         setConfig("categorize", settings.categorize ? "false" : "true")
     }
 
-    /// Opens the configured download root in Finder. The daemon stores it
-    /// with a leading `~` when the user set it that way.
+    /// The download root as an absolute path. The daemon stores it with a
+    /// leading `~` when the user set it that way.
+    var resolvedDownloadDir: String {
+        let dir = settings.downloadDir
+        guard dir == "~" || dir.hasPrefix("~/") else { return dir }
+        return FileManager.default.homeDirectoryForCurrentUser.path + String(dir.dropFirst())
+    }
+
+    /// Opens the configured download root in Finder.
     func openDownloadDir() {
-        var dir = settings.downloadDir
+        let dir = resolvedDownloadDir
         guard !dir.isEmpty else { return }
-        if dir == "~" || dir.hasPrefix("~/") {
-            let home = FileManager.default.homeDirectoryForCurrentUser.path
-            dir = home + String(dir.dropFirst())
-        }
         NSWorkspace.shared.open(URL(fileURLWithPath: dir))
+    }
+
+    /// Asks for a new download folder and hands it to the daemon.
+    ///
+    /// An accessory app has no windows and never becomes active on its own,
+    /// so the panel would open behind everything without activating first.
+    /// The path goes to the CLI as its own argv entry, so spaces in it are
+    /// not a quoting problem.
+    func chooseDownloadDir() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Choose"
+        panel.message = "Where should baaz save downloads?"
+        let current = resolvedDownloadDir
+        if !current.isEmpty {
+            panel.directoryURL = URL(fileURLWithPath: current)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        setConfig("dir", url.path)
     }
 
     /// Reveals the finished file in Finder, falling back to opening the

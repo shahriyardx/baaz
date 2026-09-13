@@ -198,7 +198,8 @@ You mostly don't have to do anything:
 
 ## Where do my files go?
 
-Straight into your Downloads folder, sorted automatically:
+Straight into your Downloads folder — or wherever you point baaz instead —
+sorted automatically:
 
 ```
 Downloads/Videos/        movies, clips
@@ -217,10 +218,14 @@ folders", and files land straight in `Downloads/`.
 
 Click the widget → the **gear icon**:
 
+- **where downloads are saved** — "Saving to" → **Change…** picks a folder
 - how many downloads run at the same time
 - how many pieces each file is split into
 - minimum file size baaz takes over (smaller files stay with Chrome)
 - category folder sorting on/off
+
+From a terminal that last one is `baaz config dir /path/to/folder` (quote it
+if it has spaces). Category folders are created inside whatever you pick.
 
 The switch next to the gear turns Chrome takeover on/off entirely.
 

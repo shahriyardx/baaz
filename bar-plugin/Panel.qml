@@ -120,9 +120,46 @@ Panel {
     act("config", key + " " + value)
   }
 
+  // Paths can contain spaces, so this one cannot go through the interpolated
+  // command line setCfg builds — the value is passed as a positional argument
+  // and quoted by the shell instead.
+  function setCfgPath(key, value) {
+    var p = actProc.createObject(root, {
+      command: ["bash", "-lc", 'baaz config "$1" "$2"', "_", key, value]
+    })
+    if (p) p.running = true
+  }
+
+  // No folder chooser is available to the shell itself, so borrow whichever
+  // desktop one is installed. Nothing happens if the user cancels (non-zero
+  // exit, no output) or if neither tool is present.
+  function chooseDownloadDir() {
+    var p = dirPicker.createObject(root)
+    if (p) p.running = true
+  }
+
   Component {
     id: actProc
     Process {
+      onExited: Qt.callLater(function() { destroy() })
+    }
+  }
+
+  Component {
+    id: dirPicker
+    Process {
+      command: ["bash", "-lc",
+        "if command -v zenity >/dev/null 2>&1; then " +
+        "  zenity --file-selection --directory --title='baaz: downloads folder'; " +
+        "elif command -v kdialog >/dev/null 2>&1; then " +
+        "  kdialog --getexistingdirectory \"$HOME\"; " +
+        "else exit 1; fi"]
+      stdout: SplitParser {
+        onRead: function(line) {
+          var dir = line.trim()
+          if (dir.length > 0) root.setCfgPath("dir", dir)
+        }
+      }
       onExited: Qt.callLater(function() { destroy() })
     }
   }
@@ -604,6 +641,60 @@ Panel {
               checked: root.cfg.categorize !== false
               foreground: Color.foreground
               onToggled: root.setCfg("categorize", root.cfg.categorize === false ? "true" : "false")
+            }
+          }
+
+          Item {
+            width: parent.width
+            implicitHeight: dirCol.implicitHeight + Style.space(6)
+
+            Column {
+              id: dirCol
+              anchors.left: parent.left
+              anchors.right: changeDir.left
+              anchors.leftMargin: Style.space(6)
+              anchors.rightMargin: Style.space(8)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(1)
+
+              Text {
+                text: "Saving to"
+                color: Color.foreground
+                opacity: 0.7
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
+
+              Text {
+                width: parent.width
+                text: root.cfg.downloadDir || "—"
+                elide: Text.ElideMiddle
+                color: Color.foreground
+                opacity: 0.4
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
+            }
+
+            Text {
+              id: changeDir
+              anchors.right: parent.right
+              anchors.rightMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Change…"
+              color: dirHover.containsMouse ? Color.accent : Color.foreground
+              opacity: dirHover.containsMouse ? 1.0 : 0.6
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+
+              MouseArea {
+                id: dirHover
+                anchors.fill: parent
+                anchors.margins: -Style.space(4)
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.chooseDownloadDir()
+              }
             }
           }
 
