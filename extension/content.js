@@ -12,6 +12,7 @@
   let menu = null;
   let currentVideo = null;
   let pageMode = false;
+  let pageURL = ""; // what a pageMode grab downloads (watch link or page URL)
   let lastX = -1, lastY = -1, lastMove = 0;
 
   // Keep in sync with mediaHosts in internal/downloader/ytdlp.go.
@@ -42,6 +43,28 @@
     for (const s of v.querySelectorAll("source")) {
       if (/^https?:/i.test(s.src)) return s.src;
     }
+    return "";
+  }
+
+  // On feed/home pages the address bar is useless (youtube.com/) — the
+  // hovered preview's own watch link lives in an anchor under the cursor
+  // or wrapping the video. Only fall back to the page URL when it points
+  // at an actual video page.
+  const VIDEO_PATH = /watch\?|\/shorts\/|\/reel(s)?\/|\/videos?\/|\/clip\/|\/status\/|youtu\.be\//;
+  function mediaTargetURL(stack, v) {
+    const cands = [];
+    for (const el of stack) {
+      if (el instanceof HTMLAnchorElement && el.href) cands.push(el.href);
+    }
+    const a = v.closest ? v.closest("a[href]") : null;
+    if (a && a.href) cands.push(a.href);
+    for (const href of cands) {
+      try {
+        const u = new URL(href, location.href);
+        if (/^https?:$/.test(u.protocol) && VIDEO_PATH.test(u.pathname + u.search)) return u.href;
+      } catch { /* skip */ }
+    }
+    if (VIDEO_PATH.test(location.pathname + location.search)) return location.href;
     return "";
   }
 
@@ -143,7 +166,7 @@
 
   function grab(format) {
     if (!currentVideo) return;
-    const url = pageMode ? location.href : videoURL(currentVideo);
+    const url = pageMode ? pageURL : videoURL(currentVideo);
     if (!url) return;
     setLabel(ICON + "<span style='margin-left:6px'>Sending…</span>");
     chrome.runtime.sendMessage(
@@ -162,10 +185,14 @@
     );
   }
 
-  function showFor(v) {
+  function showFor(v, stack) {
     const url = videoURL(v);
     pageMode = !url;
-    if (!url && !isMediaPage()) return;
+    if (!url) {
+      if (!isMediaPage()) return;
+      pageURL = mediaTargetURL(stack || [], v);
+      if (!pageURL) return; // homepage preview with no resolvable watch link
+    }
     const r = v.getBoundingClientRect();
     if (r.width < 160 || r.height < 90) return; // skip thumbnails
     currentVideo = v;
@@ -206,7 +233,7 @@
 
     if (overControl) return; // never yank the control out from under the cursor
     if (video) {
-      showFor(video);
+      showFor(video, stack);
       if (visible && !menuOpen && Date.now() - lastMove > 2500) hideUI(); // idle fade
       return;
     }
