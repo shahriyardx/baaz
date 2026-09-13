@@ -42,6 +42,7 @@ Usage:
   baaz watch                    stream JSON snapshots (for the bar widget)
   baaz daemon                   run the daemon in the foreground
   baaz install-chrome           install the Chrome native-messaging manifest
+  baaz fix-chrome               unblock the extension after a manual Remove
 ` + widgetUsage
 
 func main() {
@@ -84,6 +85,8 @@ func main() {
 		err = cmdConfig(os.Args[2:])
 	case "install-chrome":
 		err = cmdInstallChrome(os.Args[2:])
+	case "fix-chrome":
+		err = cmdFixChrome()
 	case "install-bar", "install-menubar":
 		err = cmdInstallWidget()
 	case "version", "--version", "-v":
@@ -347,6 +350,7 @@ func cmdInstallChrome(args []string) error {
 	fmt.Println("restart Chrome to pick up the native messaging host")
 	installPolicy()
 	installExtension()
+	warnTombstones(home)
 	return nil
 }
 
