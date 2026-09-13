@@ -37,17 +37,9 @@ struct SettingsView: View {
                 HStack {
                     Text("Saving to").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button {
-                        model.chooseDownloadDir()
-                    } label: {
-                        Text("Change…")
-                            .font(.caption)
-                            .padding(.vertical, 2)
-                            .padding(.horizontal, 4)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.tint)
+                    // TextButton, not a one-off Button: it is the construction
+                    // that was actually click-tested in this panel.
+                    TextButton(title: "Change…") { model.chooseDownloadDir() }
                 }
                 Text(model.settings.downloadDir.isEmpty ? "—" : model.settings.downloadDir)
                     .font(.caption)
