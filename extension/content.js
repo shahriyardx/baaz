@@ -220,5 +220,9 @@
   }, true);
 
   window.addEventListener("scroll", hideUI, true);
-  document.addEventListener("mouseleave", hideUI, true);
+  // No capture: mouseleave does not bubble, so without capture this fires
+  // only when the cursor leaves the document itself (the window edge) —
+  // with capture it fired for every element left, hiding the button the
+  // moment the cursor moved from the video onto it.
+  document.addEventListener("mouseleave", hideUI);
 })();
