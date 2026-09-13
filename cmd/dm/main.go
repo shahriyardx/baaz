@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -13,7 +14,10 @@ import (
 	"strings"
 	"syscall"
 
+	"dm"
+
 	"dm/internal/config"
+	"dm/internal/crx"
 	"dm/internal/daemon"
 	"dm/internal/ipc"
 	"dm/internal/nmhost"
@@ -274,7 +278,61 @@ func cmdInstallChrome(args []string) error {
 	}
 	fmt.Println("restart Chrome to pick up the native messaging host")
 	installPolicy()
+	installExtension()
 	return nil
+}
+
+// installExtension packs the embedded extension into a crx and registers it
+// as a Chrome "external extension", so a restart installs it — no unpacked
+// loading, no developer mode. Root only (the registry dirs live in /usr).
+func installExtension() {
+	if os.Geteuid() != 0 {
+		fmt.Println("\nrun with sudo to also auto-install the extension into Chrome:")
+		fmt.Println("  sudo dm install-chrome")
+		return
+	}
+	src, err := fs.Sub(assets.Extension, "extension")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "dm: embed:", err)
+		return
+	}
+	data, id, err := crx.Pack(src, assets.ExtensionKey)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "dm: pack extension:", err)
+		return
+	}
+	var m struct {
+		Version string `json:"version"`
+	}
+	raw, _ := fs.ReadFile(src, "manifest.json")
+	json.Unmarshal(raw, &m)
+
+	crxPath := "/usr/share/dm/dm.crx"
+	if err := os.MkdirAll(filepath.Dir(crxPath), 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "dm:", err)
+		return
+	}
+	if err := os.WriteFile(crxPath, data, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "dm:", err)
+		return
+	}
+	fmt.Println("wrote", crxPath)
+
+	entry := fmt.Sprintf("{ \"external_crx\": %q, \"external_version\": %q }\n", crxPath, m.Version)
+	for _, dir := range []string{
+		"/usr/share/google-chrome/extensions",
+		"/usr/share/chromium/extensions",
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			continue
+		}
+		path := filepath.Join(dir, id+".json")
+		if err := os.WriteFile(path, []byte(entry), 0o644); err != nil {
+			continue
+		}
+		fmt.Println("wrote", path)
+	}
+	fmt.Println("extension", id, "installs on next Chrome start (confirm the one-time “Enable” prompt)")
 }
 
 // realUserHome resolves the invoking user's home even under sudo, so
