@@ -22,15 +22,22 @@ make install           # builds and installs ~/.local/bin/dm
 make install-plugin    # installs + enables the bar widget
 ```
 
-Chrome extension:
+Chrome setup — one command:
 
-1. `dm install-chrome` (the extension ID is fixed by the `key` pinned in
-   `extension/manifest.json`, so no ID needs to be typed).
-2. chrome://extensions → Developer mode → "Load unpacked" → pick `extension/`.
-3. Restart Chrome.
+```sh
+sudo dm install-chrome
+```
 
-The signing key lives in `keys/extension-key.pem` (gitignored) — only needed
-again for a future Chrome Web Store upload.
+It installs everything: native-messaging manifests (for Chrome and
+Chromium), a managed policy that disables the "ask where to save" dialog,
+and the extension itself (packed to CRX in-process and registered as an
+external extension under `/usr/share/*/extensions`). Restart Chrome and
+confirm the one-time "Enable extension" prompt.
+
+Without sudo it still writes the user-level native-messaging manifests and
+prints what was skipped. The extension ID is pinned by `keys/extension-key.pem`
+(committed on purpose — it is a local ID pin, not a Web Store identity;
+generate a fresh key before any Web Store upload).
 
 ## CLI
 
