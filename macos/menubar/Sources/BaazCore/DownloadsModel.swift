@@ -61,10 +61,14 @@ public final class DownloadsModel: ObservableObject {
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
             guard !chunk.isEmpty else { return }
-            Task { @MainActor in self?.ingest(chunk) }
+            // Swift 6: a Task may only capture constants; `self` from a weak
+            // capture list is a var, so rebind it first.
+            guard let self else { return }
+            Task { @MainActor in self.ingest(chunk) }
         }
         p.terminationHandler = { [weak self] _ in
-            Task { @MainActor in self?.handleExit() }
+            guard let self else { return }
+            Task { @MainActor in self.handleExit() }
         }
 
         do {
