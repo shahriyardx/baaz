@@ -468,6 +468,9 @@ Panel {
 
               Row {
                 id: liveActions
+                // Above the row's full-size MouseArea, or it eats every
+                // click and pause/cancel never fire.
+                z: 2
                 anchors.right: parent.right
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter
@@ -564,6 +567,7 @@ Panel {
 
               PanelActionButton {
                 id: trashBtn
+                z: 2 // above doneClick, or the row's open-folder wins the click
                 anchors.right: parent.right
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter
