@@ -1,0 +1,143 @@
+package downloader
+
+import (
+	"bufio"
+	"context"
+	"fmt"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync/atomic"
+)
+
+const (
+	KindHTTP  = ""      // plain segmented/stream download (zero value: older state files)
+	KindMedia = "media" // handled by yt-dlp
+)
+
+// Hosts whose page URLs carry media that only yt-dlp can extract.
+var mediaHosts = []string{
+	"youtube.com", "youtu.be", "vimeo.com", "twitch.tv", "tiktok.com",
+	"x.com", "twitter.com", "instagram.com", "facebook.com",
+	"dailymotion.com", "soundcloud.com",
+}
+
+func IsMediaURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	h := strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
+	for _, m := range mediaHosts {
+		if h == m || strings.HasSuffix(h, "."+m) {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	ytProgressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)% of ~?\s*([\d.]+)([KMGT])iB`)
+	ytDestRe     = regexp.MustCompile(`\[download\] Destination: (.+)$`)
+	ytMergeRe    = regexp.MustCompile(`\[Merger\] Merging formats into "(.+)"`)
+)
+
+// runYtdlp delegates a media-page URL to yt-dlp, translating its progress
+// lines into the job's normal accounting. `-c` makes kill-and-rerun resume.
+func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
+	if _, err := exec.LookPath("yt-dlp"); err != nil {
+		return fmt.Errorf("yt-dlp is not installed (pacman -S yt-dlp)")
+	}
+	if err := os.MkdirAll(j.Dir, 0o755); err != nil {
+		return err
+	}
+	j.mu.Lock()
+	if len(j.Segments) == 0 {
+		j.Segments = []*Segment{{Start: 0, End: -1}}
+	}
+	seg := j.Segments[0]
+	j.mu.Unlock()
+
+	outTmpl := filepath.Join(j.Dir, "%(title)s [%(id)s].%(ext)s")
+	cmd := exec.CommandContext(ctx, "yt-dlp", "--newline", "--no-playlist", "-c", "-o", outTmpl, j.URL)
+	cmd.Stderr = os.Stderr // ends up in the daemon log
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	var lastPath string
+	sc := bufio.NewScanner(stdout)
+	for sc.Scan() {
+		line := sc.Text()
+		if m := ytProgressRe.FindStringSubmatch(line); m != nil {
+			pct, _ := strconv.ParseFloat(m[1], 64)
+			size, _ := strconv.ParseFloat(m[2], 64)
+			total := int64(size * float64(sizeUnit(m[3])))
+			// Multi-phase downloads (video then audio) restart the percent;
+			// keep the largest total and never let progress move backward.
+			j.mu.Lock()
+			if total > j.Total {
+				j.Total = total
+			}
+			j.mu.Unlock()
+			done := int64(pct / 100 * float64(total))
+			if done > atomic.LoadInt64(&seg.Written) {
+				atomic.StoreInt64(&seg.Written, done)
+			}
+			if e.OnProgress != nil {
+				e.OnProgress(j)
+			}
+			continue
+		}
+		if m := ytDestRe.FindStringSubmatch(line); m != nil {
+			lastPath = strings.TrimSpace(m[1])
+			j.mu.Lock()
+			j.Filename = filepath.Base(lastPath)
+			j.mu.Unlock()
+		}
+		if m := ytMergeRe.FindStringSubmatch(line); m != nil {
+			lastPath = strings.TrimSpace(m[1])
+			j.mu.Lock()
+			j.Filename = filepath.Base(lastPath)
+			j.mu.Unlock()
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err() // paused/canceled; `-c` resumes on next run
+		}
+		return fmt.Errorf("yt-dlp failed: %v (see daemon.log)", err)
+	}
+	j.mu.Lock()
+	if j.Total > 0 {
+		atomic.StoreInt64(&seg.Written, j.Total)
+	}
+	if lastPath != "" {
+		j.FinalPath = lastPath
+	}
+	j.mu.Unlock()
+	return nil
+}
+
+func sizeUnit(s string) int64 {
+	switch s {
+	case "K":
+		return 1 << 10
+	case "M":
+		return 1 << 20
+	case "G":
+		return 1 << 30
+	case "T":
+		return 1 << 40
+	}
+	return 1
+}

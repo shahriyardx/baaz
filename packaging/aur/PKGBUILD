@@ -9,6 +9,7 @@ license=('MIT')
 depends=('glibc')
 makedepends=('go')
 optdepends=('libnotify: desktop notifications'
+            'yt-dlp: media-site downloads (YouTube, TikTok, ...)'
             'omarchy: status bar widget (baaz install-bar)')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('19499d5386e19d41c97838321d9eef306151e0770863d8c7f9d39818b4492d0c')

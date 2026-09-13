@@ -6,6 +6,19 @@
   let btn = null;
   let currentVideo = null;
   let hideTimer = 0;
+  let pageMode = false; // true: send the page URL (daemon hands it to yt-dlp)
+
+  // Keep in sync with mediaHosts in internal/downloader/ytdlp.go.
+  const MEDIA_HOSTS = [
+    "youtube.com", "youtu.be", "vimeo.com", "twitch.tv", "tiktok.com",
+    "x.com", "twitter.com", "instagram.com", "facebook.com",
+    "dailymotion.com", "soundcloud.com",
+  ];
+
+  function isMediaPage() {
+    const h = location.hostname.replace(/^www\./, "");
+    return MEDIA_HOSTS.some((m) => h === m || h.endsWith("." + m));
+  }
 
   function videoURL(v) {
     const src = v.currentSrc || v.src || "";
@@ -48,11 +61,11 @@
       e.stopPropagation();
       e.preventDefault();
       if (!currentVideo) return;
-      const url = videoURL(currentVideo);
+      const url = pageMode ? location.href : videoURL(currentVideo);
       if (!url) return;
       btn.textContent = "…";
       chrome.runtime.sendMessage(
-        { type: "baaz-grab", url, filename: filenameFor(url), referrer: location.href },
+        { type: "baaz-grab", url, filename: pageMode ? "" : filenameFor(url), referrer: location.href },
         (reply) => {
           btn.textContent = reply && reply.ok ? "✓ baaz" : "✗ baaz";
           setTimeout(() => { if (btn) btn.textContent = "⬇ baaz"; }, 2000);
@@ -65,7 +78,10 @@
 
   function showFor(v) {
     const url = videoURL(v);
-    if (!url) return; // blob:/MSE stream — nothing at a URL to download
+    // blob:/MSE stream: no direct URL, but on known media sites the page
+    // URL itself is downloadable via yt-dlp on the daemon side.
+    pageMode = !url;
+    if (!url && !isMediaPage()) return;
     currentVideo = v;
     const b = ensureButton();
     const r = v.getBoundingClientRect();

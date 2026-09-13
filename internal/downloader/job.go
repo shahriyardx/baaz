@@ -51,6 +51,7 @@ type Job struct {
 	CompletedAt *time.Time        `json:"completedAt,omitempty"`
 	FinalPath   string            `json:"finalPath,omitempty"`
 	NoRange     bool              `json:"noRange,omitempty"` // single-stream job (no usable Range support)
+	Kind        string            `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp
 
 	mu        sync.Mutex
 	cancel    context.CancelFunc
@@ -171,6 +172,9 @@ func (e *Engine) Run(parent context.Context, j *Job) error {
 }
 
 func (e *Engine) run(ctx context.Context, j *Job) error {
+	if j.Kind == KindMedia {
+		return e.runYtdlp(ctx, j) // yt-dlp writes the final file itself
+	}
 	pr, err := probe(ctx, e.Client, j.URL, j.Headers)
 	if err != nil {
 		return err

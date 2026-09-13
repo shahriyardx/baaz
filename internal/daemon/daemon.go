@@ -149,6 +149,9 @@ func (m *Manager) Add(url, filename string, headers map[string]string) (string, 
 		Total:     -1,
 		CreatedAt: time.Now(),
 	}
+	if downloader.IsMediaURL(url) {
+		j.Kind = downloader.KindMedia
+	}
 	m.mu.Lock()
 	m.jobs[j.ID] = j
 	m.order = append(m.order, j.ID)
