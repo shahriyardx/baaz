@@ -60,7 +60,9 @@ Panel {
 
   function jobCaption(j) {
     if (j.state === "active") {
-      var s = human(j.done) + " / " + human(j.total > 0 ? j.total : j.done) + " · " + human(j.speed) + "/s"
+      if (j.total <= 0) // server sent no size: only bytes-so-far is knowable
+        return human(j.done) + " · " + human(j.speed) + "/s · size unknown"
+      var s = human(j.done) + " / " + human(j.total) + " · " + human(j.speed) + "/s"
       if (j.eta >= 0) s += " · " + (j.eta > 90 ? Math.ceil(j.eta / 60) + "m" : j.eta + "s") + " left"
       return s
     }
@@ -245,16 +247,38 @@ Panel {
                 }
 
                 Rectangle {
+                  id: track
                   width: parent.width
                   height: Style.space(4)
                   radius: height / 2
                   color: Qt.alpha(Color.foreground, 0.15)
 
+                  readonly property bool indeterminate:
+                    liveRow.modelData.total <= 0 && liveRow.modelData.state === "active"
+
                   Rectangle {
+                    visible: !track.indeterminate
                     width: parent.width * root.jobPercent(liveRow.modelData)
                     height: parent.height
                     radius: parent.radius
                     color: liveRow.modelData.state === "failed" ? Color.urgent : Color.accent
+                  }
+
+                  // Unknown total: a sweeping chunk instead of a fake 100% fill.
+                  Rectangle {
+                    id: sweep
+                    visible: track.indeterminate
+                    width: parent.width * 0.25
+                    height: parent.height
+                    radius: parent.radius
+                    color: Color.accent
+
+                    SequentialAnimation on x {
+                      running: sweep.visible
+                      loops: Animation.Infinite
+                      NumberAnimation { from: 0; to: track.width * 0.75; duration: 900; easing.type: Easing.InOutQuad }
+                      NumberAnimation { from: track.width * 0.75; to: 0; duration: 900; easing.type: Easing.InOutQuad }
+                    }
                   }
                 }
 

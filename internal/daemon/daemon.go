@@ -404,8 +404,12 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 	if info.Name == "" {
 		info.Name = j.URL
 	}
-	if state == downloader.StateDone && j.Total > 0 {
-		info.Done = j.Total
+	if state == downloader.StateDone {
+		if j.Total > 0 {
+			info.Done = j.Total
+		} else {
+			info.Total = info.Done // unknown-length stream: final size is the truth
+		}
 	}
 	if info.Speed > 0 && info.Total > 0 && info.Done <= info.Total {
 		info.ETA = (info.Total - info.Done) / info.Speed
