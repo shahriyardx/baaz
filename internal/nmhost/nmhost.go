@@ -71,6 +71,19 @@ func handle(msg *inMessage) outMessage {
 			headers["User-Agent"] = msg.UserAgent
 		}
 		req = &ipc.Request{Cmd: "add-browser", URL: msg.URL, Filename: msg.Filename, Headers: headers, Size: msg.FileSize}
+	case "grab":
+		// User clicked the in-page video button: no intercept/min-size policy.
+		headers := map[string]string{}
+		if msg.Cookies != "" {
+			headers["Cookie"] = msg.Cookies
+		}
+		if msg.Referrer != "" {
+			headers["Referer"] = msg.Referrer
+		}
+		if msg.UserAgent != "" {
+			headers["User-Agent"] = msg.UserAgent
+		}
+		req = &ipc.Request{Cmd: "add", URL: msg.URL, Filename: msg.Filename, Headers: headers}
 	case "ping":
 		req = &ipc.Request{Cmd: "ping"}
 	case "cancel":

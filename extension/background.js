@@ -106,3 +106,26 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
   suggest(); // pass-through; the async work below decides interception
   intercept(item).catch((e) => console.error("baaz intercept error:", e));
 });
+
+// Explicit user click on the in-page video button: bypasses intercept/min-size
+// policy — the user asked for exactly this file.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== "baaz-grab") return;
+  (async () => {
+    try {
+      const reply = await sendNative({
+        type: "grab",
+        url: msg.url,
+        filename: msg.filename || "",
+        cookies: await cookieHeaderFor(msg.url),
+        referrer: msg.referrer || "",
+        userAgent: navigator.userAgent,
+      });
+      sendResponse({ ok: !!(reply && reply.ok) });
+    } catch (e) {
+      console.warn("baaz grab failed:", e.message);
+      sendResponse({ ok: false });
+    }
+  })();
+  return true; // async sendResponse
+});
