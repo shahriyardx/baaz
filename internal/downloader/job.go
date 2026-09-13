@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -49,10 +50,21 @@ type Job struct {
 	CreatedAt   time.Time         `json:"createdAt"`
 	CompletedAt *time.Time        `json:"completedAt,omitempty"`
 	FinalPath   string            `json:"finalPath,omitempty"`
+	NoRange     bool              `json:"noRange,omitempty"` // single-stream job (no usable Range support)
 
-	mu     sync.Mutex
-	cancel context.CancelFunc
+	mu        sync.Mutex
+	cancel    context.CancelFunc
+	softPause atomic.Bool // pause by not reading; connection stays open
 }
+
+// SetSoftPause suspends/continues a running single-stream transfer without
+// dropping the connection — the only lossless pause when ranges don't work.
+func (j *Job) SetSoftPause(v bool) { j.softPause.Store(v) }
+func (j *Job) SoftPaused() bool    { return j.softPause.Load() }
+
+// errPausedConnLost: the server dropped a soft-paused connection; the job
+// should land in paused (resume retries with a Range request), not failed.
+var errPausedConnLost = errors.New("connection lost while paused")
 
 func (j *Job) Done() int64 {
 	var n int64
@@ -138,6 +150,9 @@ func (e *Engine) Run(parent context.Context, j *Job) error {
 		j.CompletedAt = &now
 		j.Error = ""
 		j.Segments = nil // drop segment detail; keep the record for "recent"
+	case errors.Is(err, errPausedConnLost) && j.State == StateActive:
+		j.State = StatePaused
+		j.softPause.Store(false)
 	case ctx.Err() != nil && j.State == StateActive:
 		// stopped via Stop() — pause/cancel decided by the caller
 		j.State = StatePaused
@@ -181,6 +196,7 @@ func (e *Engine) run(ctx context.Context, j *Job) error {
 		if errors.Is(err, errRangeNotSupported) {
 			// Server lied on a segment request: restart as one stream.
 			j.mu.Lock()
+			j.NoRange = true
 			j.Segments = []*Segment{{Start: 0, End: pr.Total - 1}}
 			j.mu.Unlock()
 			err = e.runSingle(ctx, j, nil)
@@ -191,7 +207,11 @@ func (e *Engine) run(ctx context.Context, j *Job) error {
 		if pr.Total > 0 {
 			end = pr.Total - 1
 		}
-		j.Segments = []*Segment{{Start: 0, End: end}}
+		j.NoRange = true
+		if len(j.Segments) == 0 {
+			j.Segments = []*Segment{{Start: 0, End: end}}
+		}
+		j.Segments[0].End = end
 		j.mu.Unlock()
 		err = e.runSingle(ctx, j, pr.Body)
 	}
@@ -254,18 +274,69 @@ func (e *Engine) runSegmented(ctx context.Context, j *Job) error {
 	}
 }
 
-func (e *Engine) runSingle(ctx context.Context, j *Job, probeBody interface {
-	Read([]byte) (int, error)
-	Close() error
-}) error {
+func (e *Engine) runSingle(ctx context.Context, j *Job, probeBody io.ReadCloser) error {
 	seg := j.Segments[0]
-	seg.Written = 0 // single stream always restarts from zero
 
-	f, err := os.OpenFile(j.partPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-	if err != nil {
-		if probeBody != nil {
-			probeBody.Close()
+	// Pick the byte source. With bytes already on disk, first ask the server
+	// to continue from that offset — some honor Range even when the total
+	// size is unknown. A 200 means start over.
+	var body io.ReadCloser
+	truncate := true
+	switch {
+	case probeBody != nil:
+		seg.Written = 0
+		body = probeBody
+	case seg.written() > 0:
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, j.URL, nil)
+		if err != nil {
+			return err
 		}
+		applyHeaders(req, j.Headers)
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", seg.written()))
+		resp, err := e.Client.Do(req)
+		if err != nil {
+			return err
+		}
+		switch resp.StatusCode {
+		case http.StatusPartialContent:
+			if start, ok := parseContentRangeStart(resp.Header.Get("Content-Range")); ok && start == seg.written() {
+				body = resp.Body // append from where we stopped
+				truncate = false
+			} else {
+				resp.Body.Close()
+				return fmt.Errorf("server resumed at wrong offset")
+			}
+		case http.StatusOK:
+			seg.Written = 0 // stream restarts; so do we
+			body = resp.Body
+		default:
+			resp.Body.Close()
+			return fmt.Errorf("HTTP %s", resp.Status)
+		}
+	default:
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, j.URL, nil)
+		if err != nil {
+			return err
+		}
+		applyHeaders(req, j.Headers)
+		resp, err := e.Client.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+			resp.Body.Close()
+			return fmt.Errorf("HTTP %s", resp.Status)
+		}
+		body = resp.Body
+	}
+	defer body.Close()
+
+	flags := os.O_CREATE | os.O_WRONLY
+	if truncate {
+		flags |= os.O_TRUNC
+	}
+	f, err := os.OpenFile(j.partPath(), flags, 0o644)
+	if err != nil {
 		return err
 	}
 	defer f.Close()
@@ -287,28 +358,12 @@ func (e *Engine) runSingle(ctx context.Context, j *Job, probeBody interface {
 		}
 	}()
 
-	if probeBody != nil {
-		defer probeBody.Close()
-		if err := copyToSegment(ctx, f, seg, probeBody); err != nil {
-			return err
+	if err := copyToSegment(ctx, j, f, seg, body); err != nil {
+		// A soft-paused stream that the server hung up on becomes a paused
+		// job; resume goes through the Range-append path above.
+		if j.SoftPaused() && ctx.Err() == nil {
+			return errPausedConnLost
 		}
-		return f.Sync()
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, j.URL, nil)
-	if err != nil {
-		return err
-	}
-	applyHeaders(req, j.Headers)
-	resp, err := e.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %s", resp.Status)
-	}
-	if err := copyToSegment(ctx, f, seg, resp.Body); err != nil {
 		return err
 	}
 	return f.Sync()

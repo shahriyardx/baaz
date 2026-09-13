@@ -57,6 +57,20 @@ func probe(ctx context.Context, client *http.Client, rawURL string, headers map[
 	}
 }
 
+// parseContentRangeStart extracts S from "bytes S-E/…".
+func parseContentRangeStart(v string) (int64, bool) {
+	v = strings.TrimPrefix(strings.TrimSpace(v), "bytes ")
+	i := strings.IndexByte(v, '-')
+	if i < 0 {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(v[:i]), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
 // parseContentRangeTotal extracts N from "bytes 0-0/N"; -1 on failure or "*".
 func parseContentRangeTotal(v string) int64 {
 	i := strings.LastIndexByte(v, '/')

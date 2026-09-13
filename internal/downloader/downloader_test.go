@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -166,5 +167,98 @@ func TestNameCollision(t *testing.T) {
 	}
 	if filepath.Base(j.FinalPath) != "dup (1).bin" {
 		t.Fatalf("collision name = %s, want dup (1).bin", filepath.Base(j.FinalPath))
+	}
+}
+
+// Soft pause: a no-range stream pauses by not reading and later finishes.
+func TestSoftPauseStream(t *testing.T) {
+	data := testPayload(t, 1<<20)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		for off := 0; off < len(data); off += 32 << 10 {
+			end := off + 32<<10
+			if end > len(data) {
+				end = len(data)
+			}
+			w.(http.Flusher).Flush()
+			w.Write(data[off:end])
+			time.Sleep(5 * time.Millisecond)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	j := &Job{ID: "sp1", URL: srv.URL + "/s.bin", Dir: dir, State: StateQueued, Total: -1, CreatedAt: time.Now()}
+	e := NewEngine(4, 64<<10)
+	done := make(chan error, 1)
+	go func() { done <- e.Run(context.Background(), j) }()
+
+	time.Sleep(40 * time.Millisecond)
+	j.SetSoftPause(true)
+	time.Sleep(300 * time.Millisecond) // let in-flight chunk land
+	frozen := j.Done()
+	time.Sleep(400 * time.Millisecond)
+	if got := j.Done(); got != frozen {
+		t.Fatalf("bytes advanced while soft-paused: %d -> %d", frozen, got)
+	}
+	j.SetSoftPause(false)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(j.FinalPath)
+	if !bytes.Equal(got, data) {
+		t.Fatal("content mismatch after soft pause")
+	}
+}
+
+// Append-resume: server ignores the probe range but honors bytes=N- later.
+func TestStreamAppendResume(t *testing.T) {
+	data := testPayload(t, 1<<20)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rng := r.Header.Get("Range")
+		if rng != "" && rng != "bytes=0-0" {
+			var start int
+			fmt.Sscanf(rng, "bytes=%d-", &start)
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/*", start, len(data)-1))
+			w.WriteHeader(http.StatusPartialContent)
+			w.Write(data[start:])
+			return
+		}
+		w.WriteHeader(http.StatusOK) // probe sees no range support
+		for off := 0; off < len(data); off += 16 << 10 {
+			end := off + 16<<10
+			if end > len(data) {
+				end = len(data)
+			}
+			w.(http.Flusher).Flush()
+			w.Write(data[off:end])
+			time.Sleep(3 * time.Millisecond)
+		}
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	j := &Job{ID: "ar1", URL: srv.URL + "/a.bin", Dir: dir, State: StateQueued, Total: -1, CreatedAt: time.Now()}
+	e := NewEngine(4, 64<<10)
+	done := make(chan error, 1)
+	go func() { done <- e.Run(context.Background(), j) }()
+	for i := 0; i < 100 && j.Done() == 0; i++ {
+		time.Sleep(5 * time.Millisecond)
+	}
+	j.Stop()
+	<-done
+	if j.GetState() != StatePaused {
+		t.Fatalf("state after stop = %s", j.GetState())
+	}
+	mid := j.Done()
+	if mid == 0 {
+		t.Skip("stopped before any bytes; timing")
+	}
+	if err := e.Run(context.Background(), j); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(j.FinalPath)
+	if !bytes.Equal(got, data) {
+		t.Fatalf("content mismatch after append-resume (paused at %d)", mid)
 	}
 }

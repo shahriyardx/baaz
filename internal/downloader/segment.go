@@ -75,7 +75,7 @@ func (e *Engine) trySegment(ctx context.Context, j *Job, f *os.File, seg *Segmen
 	default:
 		return fmt.Errorf("HTTP %s", resp.Status)
 	}
-	if err := copyToSegment(ctx, f, seg, resp.Body); err != nil {
+	if err := copyToSegment(ctx, j, f, seg, resp.Body); err != nil {
 		return err
 	}
 	if !seg.complete() {
@@ -85,12 +85,22 @@ func (e *Engine) trySegment(ctx context.Context, j *Job, f *os.File, seg *Segmen
 }
 
 // copyToSegment streams r into f at the segment's current offset, updating
-// Written atomically so progress reporting sees live counts.
-func copyToSegment(ctx context.Context, f *os.File, seg *Segment, r io.Reader) error {
+// Written atomically so progress reporting sees live counts. While the job
+// is soft-paused it stops reading — TCP backpressure holds the transfer
+// without closing the connection.
+func copyToSegment(ctx context.Context, j *Job, f *os.File, seg *Segment, r io.Reader) error {
 	buf := make([]byte, copyBufSize)
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+		if j.SoftPaused() {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(250 * time.Millisecond):
+			}
+			continue
 		}
 		n, rerr := r.Read(buf)
 		if n > 0 {

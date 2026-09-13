@@ -171,6 +171,13 @@ func (m *Manager) Pause(id string) error {
 	}
 	switch j.GetState() {
 	case downloader.StateActive:
+		if j.NoRange {
+			// No ranges = a dropped connection can't continue, so pause by
+			// holding the connection open and reading nothing.
+			j.SetSoftPause(true)
+			m.broadcast()
+			return nil
+		}
 		j.Stop() // Run() flips it to paused and runJob persists
 	case downloader.StateQueued:
 		j.SetState(downloader.StatePaused)
@@ -186,6 +193,11 @@ func (m *Manager) Resume(id string) error {
 	j, err := m.get(id)
 	if err != nil {
 		return err
+	}
+	if j.SoftPaused() {
+		j.SetSoftPause(false)
+		m.broadcast()
+		return nil
 	}
 	s := j.GetState()
 	if s != downloader.StatePaused && s != downloader.StateFailed {
@@ -416,6 +428,9 @@ func (m *Manager) Snapshot() *ipc.Snapshot {
 }
 
 func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo {
+	if state == downloader.StateActive && j.SoftPaused() {
+		state = downloader.StatePaused // held connection reads as paused
+	}
 	info := ipc.JobInfo{
 		ID:    j.ID,
 		Name:  j.Filename,
