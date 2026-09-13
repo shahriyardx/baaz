@@ -381,9 +381,35 @@ Panel {
           spacing: Style.space(2)
           visible: !root.settingsView && root.recentJobs.length > 0
 
-          PanelSectionHeader {
-            text: "Recent"
-            foreground: Color.foreground
+          Item {
+            width: parent.width
+            implicitHeight: recentHeader.implicitHeight
+
+            PanelSectionHeader {
+              id: recentHeader
+              text: "Recent"
+              foreground: Color.foreground
+            }
+
+            Text {
+              anchors.right: parent.right
+              anchors.rightMargin: Style.space(6)
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Clear all"
+              color: clearHover.containsMouse ? Color.accent : Color.foreground
+              opacity: clearHover.containsMouse ? 1.0 : 0.5
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+
+              MouseArea {
+                id: clearHover
+                anchors.fill: parent
+                anchors.margins: -Style.space(4)
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.act("clear", "")
+              }
+            }
           }
 
           Repeater {
@@ -403,10 +429,23 @@ Panel {
                   : "transparent"
               }
 
+              PanelActionButton {
+                id: trashBtn
+                anchors.right: parent.right
+                anchors.rightMargin: Style.space(6)
+                anchors.verticalCenter: parent.verticalCenter
+                iconText: ""
+                tooltipText: "Delete file"
+                foreground: Color.foreground
+                opacity: doneClick.containsMouse || trashBtn.containsMouse ? 1.0 : 0.0
+                visible: opacity > 0
+                onClicked: root.act("delete", doneRow.modelData.id)
+              }
+
               Column {
                 id: doneText
                 anchors.left: parent.left
-                anchors.right: parent.right
+                anchors.right: trashBtn.left
                 anchors.leftMargin: Style.space(6)
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter

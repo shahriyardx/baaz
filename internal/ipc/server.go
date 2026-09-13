@@ -15,6 +15,8 @@ type Backend interface {
 	Pause(id string) error
 	Resume(id string) error
 	Cancel(id string) error
+	Clear() error
+	Delete(id string) error
 	Snapshot() *Snapshot
 	Subscribe() (<-chan *Snapshot, func())
 	SetSettings(kv map[string]string) error
@@ -108,6 +110,10 @@ func (s *Server) dispatch(req *Request) Response {
 		return errResp(s.backend.Resume(req.ID))
 	case "cancel":
 		return errResp(s.backend.Cancel(req.ID))
+	case "clear":
+		return errResp(s.backend.Clear())
+	case "delete":
+		return errResp(s.backend.Delete(req.ID))
 	case "list", "status":
 		return Response{OK: true, Snapshot: s.backend.Snapshot()}
 	default:

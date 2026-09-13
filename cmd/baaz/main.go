@@ -31,6 +31,8 @@ Usage:
   baaz add URL [--out NAME]     queue a download (starts daemon if needed)
   baaz ls                       list downloads
   baaz pause|resume|cancel ID   control a download
+  baaz delete ID                remove a finished download AND its file
+  baaz clear                    clear the finished list (files stay)
   baaz on | off                 enable / disable Chrome interception
   baaz config [KEY VALUE]       show or change settings
                               keys: intercept segments max-active min-size dir
@@ -69,8 +71,10 @@ func main() {
 		err = cmdStatus(len(os.Args) > 2 && os.Args[2] == "--json")
 	case "watch":
 		err = cmdWatch()
-	case "pause", "resume", "cancel":
+	case "pause", "resume", "cancel", "delete":
 		err = cmdControl(os.Args[1], os.Args[2:])
+	case "clear":
+		err = cmdClear()
 	case "on":
 		err = cmdConfig([]string{"intercept", "true"})
 	case "off":
@@ -174,6 +178,22 @@ func cmdControl(cmd string, args []string) error {
 	}
 	defer c.Close()
 	resp, err := c.Do(&ipc.Request{Cmd: cmd, ID: args[0]})
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("%s", resp.Error)
+	}
+	return nil
+}
+
+func cmdClear() error {
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	resp, err := c.Do(&ipc.Request{Cmd: "clear"})
 	if err != nil {
 		return err
 	}

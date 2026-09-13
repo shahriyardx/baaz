@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -229,6 +230,59 @@ func (m *Manager) Cancel(id string) error {
 	m.remove(j)
 	m.broadcast()
 	return nil
+}
+
+// Clear drops every completed job record; downloaded files stay on disk.
+func (m *Manager) Clear() error {
+	m.mu.Lock()
+	var done []*downloader.Job
+	for _, j := range m.jobs {
+		if j.GetState() == downloader.StateDone {
+			done = append(done, j)
+		}
+	}
+	m.mu.Unlock()
+	for _, j := range done {
+		m.forget(j)
+	}
+	m.broadcast()
+	return nil
+}
+
+// Delete removes one finished/failed job AND its file from the filesystem.
+func (m *Manager) Delete(id string) error {
+	j, err := m.get(id)
+	if err != nil {
+		return err
+	}
+	s := j.GetState()
+	if s != downloader.StateDone && s != downloader.StateFailed {
+		return fmt.Errorf("job %s is %s — cancel it instead", id, s)
+	}
+	if s == downloader.StateDone && j.FinalPath != "" {
+		if err := os.Remove(j.FinalPath); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	j.CleanupPart()
+	m.forget(j)
+	m.broadcast()
+	return nil
+}
+
+// forget removes a job's record and state file (never the downloaded file).
+func (m *Manager) forget(j *downloader.Job) {
+	downloader.Remove(config.JobsDir(), j)
+	m.mu.Lock()
+	delete(m.jobs, j.ID)
+	delete(m.samples, j.ID)
+	for i, id := range m.order {
+		if id == j.ID {
+			m.order = append(m.order[:i], m.order[i+1:]...)
+			break
+		}
+	}
+	m.mu.Unlock()
 }
 
 func (m *Manager) remove(j *downloader.Job) {
