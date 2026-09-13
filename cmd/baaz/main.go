@@ -25,6 +25,9 @@ import (
 	"baaz/internal/nmhost"
 )
 
+// Overridden by -ldflags "-X main.version=..." in release builds.
+var version = "dev"
+
 const usage = `baaz — segmented download manager
 
 Usage:
@@ -85,6 +88,8 @@ func main() {
 		err = cmdInstallChrome(os.Args[2:])
 	case "install-bar":
 		err = cmdInstallBar()
+	case "version", "--version", "-v":
+		fmt.Println(version)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
