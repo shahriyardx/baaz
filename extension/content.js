@@ -179,6 +179,18 @@
     menu.style.display = "none";
   }
 
+  // Fade out like native player controls: idle cursor hides the button,
+  // unless the quality menu is open or the cursor sits on the control.
+  let idleTimer = 0;
+  function armIdleHide() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      const menuOpen = menu && menu.style.display !== "none";
+      const onControl = wrap && wrap.matches(":hover");
+      if (!menuOpen && !onControl) hideUI();
+    }, 2500);
+  }
+
   function scheduleHide() {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(hideUI, 450);
@@ -201,10 +213,12 @@
     if (v) {
       clearTimeout(hideTimer);
       showFor(v);
+      armIdleHide();
     } else if (wrap && wrap.style.display !== "none") {
       scheduleHide();
     }
   }, true);
 
   window.addEventListener("scroll", hideUI, true);
+  document.addEventListener("mouseleave", hideUI, true);
 })();
