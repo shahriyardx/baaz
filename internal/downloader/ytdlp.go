@@ -50,11 +50,62 @@ var (
 	ytMoveRe = regexp.MustCompile(`\[MoveFiles\] Moving file "(.+)" to "(.+)"`)
 )
 
+// lookupYtdlp resolves the yt-dlp binary.
+//
+// PATH alone is not enough. The daemon is usually started by something with a
+// minimal environment — Chrome launching the native-messaging host, or a GUI
+// login item — and that PATH omits the directories package managers install
+// into (notably Homebrew's /opt/homebrew/bin on Apple Silicon). Falling back
+// to the known locations is what stops "yt-dlp is not installed" from being
+// reported on a machine where it plainly is.
+func lookupYtdlp() (string, error) {
+	if p, err := exec.LookPath("yt-dlp"); err == nil {
+		return p, nil
+	}
+	for _, dir := range ytdlpBinDirs {
+		p := filepath.Join(dir, "yt-dlp")
+		if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+			return p, nil
+		}
+	}
+	return "", fmt.Errorf("yt-dlp is not installed (%s)", ytdlpInstallHint)
+}
+
+// ytdlpEnv adds those same directories to the child's PATH, because yt-dlp
+// looks up ffmpeg itself and would otherwise fail to merge video with audio
+// on exactly the machines described above.
+func ytdlpEnv() []string {
+	env := os.Environ()
+	seen := map[string]bool{}
+	var parts []string
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		if dir != "" && !seen[dir] {
+			seen[dir] = true
+			parts = append(parts, dir)
+		}
+	}
+	for _, dir := range ytdlpBinDirs {
+		if !seen[dir] {
+			seen[dir] = true
+			parts = append(parts, dir)
+		}
+	}
+	path := "PATH=" + strings.Join(parts, string(filepath.ListSeparator))
+	for i, kv := range env {
+		if strings.HasPrefix(kv, "PATH=") {
+			env[i] = path
+			return env
+		}
+	}
+	return append(env, path)
+}
+
 // runYtdlp delegates a media-page URL to yt-dlp, translating its progress
 // lines into the job's normal accounting. `-c` makes kill-and-rerun resume.
 func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
-	if _, err := exec.LookPath("yt-dlp"); err != nil {
-		return fmt.Errorf("yt-dlp is not installed (pacman -S yt-dlp)")
+	bin, err := lookupYtdlp()
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(j.Dir, 0o755); err != nil {
 		return err
@@ -74,7 +125,7 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 		if j.Format == "audio" {
 			cat = "Music"
 		}
-		outDir = filepath.Join(j.Dir, "baaz", cat)
+		outDir = filepath.Join(j.Dir, cat)
 		if err := os.MkdirAll(outDir, 0o755); err != nil {
 			return err
 		}
@@ -90,7 +141,8 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 		"-o", "%(title).120B [%(id)s].%(ext)s"}
 	args = append(args, formatArgs(j.Format)...)
 	args = append(args, j.URL)
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Env = ytdlpEnv()
 	cmd.Stderr = os.Stderr // ends up in the daemon log
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -80,6 +80,30 @@ func (j *Job) Done() int64 {
 	return n
 }
 
+// SegmentStat is one byte range's live progress.
+type SegmentStat struct {
+	Done  int64
+	Total int64 // -1 when the length is unknown (single unranged stream)
+}
+
+// SegmentProgress reports every segment's progress, so a UI can show the
+// split actually working. Same locking as Done: take the slice under the
+// mutex, then read each counter atomically.
+func (j *Job) SegmentProgress() []SegmentStat {
+	j.mu.Lock()
+	segs := j.Segments
+	j.mu.Unlock()
+	out := make([]SegmentStat, 0, len(segs))
+	for _, s := range segs {
+		total := int64(-1)
+		if s.End >= 0 {
+			total = s.End - s.Start + 1
+		}
+		out = append(out, SegmentStat{Done: s.written(), Total: total})
+	}
+	return out
+}
+
 func (j *Job) GetState() State {
 	j.mu.Lock()
 	defer j.mu.Unlock()

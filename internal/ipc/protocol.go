@@ -35,6 +35,14 @@ type Response struct {
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 }
 
+// SegmentInfo is one byte range of a job. Sent only while a job is in
+// flight — finished jobs drop their segments — so a UI can show the file
+// genuinely being pulled in parallel pieces.
+type SegmentInfo struct {
+	Done  int64 `json:"done"`
+	Total int64 `json:"total"` // -1 when the length is unknown
+}
+
 type JobInfo struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
@@ -45,6 +53,8 @@ type JobInfo struct {
 	ETA   int64  `json:"eta"`   // seconds, -1 when unknown
 	Dir   string `json:"dir"`
 	Error string `json:"error,omitempty"`
+
+	Segments []SegmentInfo `json:"segments,omitempty"`
 }
 
 // Snapshot is the full state pushed to `watch` subscribers and returned by

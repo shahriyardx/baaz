@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +12,7 @@ type Config struct {
 	DownloadDir  string `json:"downloadDir"`
 	MaxActive    int    `json:"maxActive"`
 	MinSplitSize int64  `json:"minSplitSize"`
-	Intercept    *bool  `json:"intercept,omitempty"`  // pointer: absent = true
+	Intercept    *bool  `json:"intercept,omitempty"` // pointer: absent = true
 	MinSizeMB    int    `json:"minSizeMB"`
 	Categorize   *bool  `json:"categorize,omitempty"` // pointer: absent = true
 }
@@ -91,31 +90,11 @@ func ExpandHome(p string) string {
 	return p
 }
 
-func configDir() string {
-	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return filepath.Join(d, "baaz")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "baaz")
-}
-
-func DataDir() string {
-	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
-		return filepath.Join(d, "baaz")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".local", "share", "baaz")
-}
+// Per-platform layout lives in paths_<goos>.go: configDir, DataDir and
+// SocketPath differ, everything below is derived and shared.
 
 func JobsDir() string { return filepath.Join(DataDir(), "jobs") }
 
 func LogPath() string { return filepath.Join(DataDir(), "daemon.log") }
 
 func PidPath() string { return filepath.Join(DataDir(), "daemon.pid") }
-
-func SocketPath() string {
-	if d := os.Getenv("XDG_RUNTIME_DIR"); d != "" {
-		return filepath.Join(d, "baaz.sock")
-	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("baaz-%d.sock", os.Getuid()))
-}

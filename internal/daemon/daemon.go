@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -108,11 +107,6 @@ func (m *Manager) Shutdown() {
 	for _, j := range running {
 		downloader.Save(config.JobsDir(), j)
 	}
-}
-
-// notify sends a desktop notification; failures are irrelevant.
-func notify(title, body string) {
-	go exec.Command("notify-send", "-a", "baaz", "-i", "folder-download", title, body).Run()
 }
 
 func newID() string {
@@ -520,6 +514,14 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 	}
 	if info.Speed > 0 && info.Total > 0 && info.Done <= info.Total {
 		info.ETA = (info.Total - info.Done) / info.Speed
+	}
+	// Only for jobs still in flight: a finished job has already dropped its
+	// segments, and shipping them for every recent entry would bloat a
+	// snapshot that goes out twice a second.
+	if state != downloader.StateDone {
+		for _, sp := range j.SegmentProgress() {
+			info.Segments = append(info.Segments, ipc.SegmentInfo{Done: sp.Done, Total: sp.Total})
+		}
 	}
 	return info
 }

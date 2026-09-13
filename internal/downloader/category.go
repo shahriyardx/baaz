@@ -36,7 +36,9 @@ func CategoryFor(name string) string {
 	return "Other"
 }
 
-// CategorizedDir places a file under <base>/baaz/<Category>.
+// CategorizedDir places a file under <base>/<Category> — straight into the
+// download folder, not a baaz-branded one. The categories are the only
+// grouping; a wrapper folder just adds a click to reach every file.
 func CategorizedDir(base, name string) string {
-	return filepath.Join(base, "baaz", CategoryFor(name))
+	return filepath.Join(base, CategoryFor(name))
 }

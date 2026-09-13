@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Wraps the SwiftPM executable in Baaz.app.
+#
+# SwiftPM cannot emit an app bundle, and the menu bar app needs one: only a
+# bundle carries the Info.plist whose LSUIElement keeps the app out of the
+# Dock and the app switcher.
+#
+# Usage: macos/make-app.sh [OUTPUT_DIR] [VERSION]
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+root="$(dirname "$here")"
+out="${1:-$root/build}"
+version="${2:-0.0.0-dev}"
+
+app="$out/Baaz.app"
+macos_dir="$app/Contents/MacOS"
+res_dir="$app/Contents/Resources"
+
+echo "building BaazMenuBar (release)..."
+swift build --package-path "$here/menubar" -c release
+
+bin="$(swift build --package-path "$here/menubar" -c release --show-bin-path)/BaazMenuBar"
+[ -x "$bin" ] || { echo "make-app: $bin missing"; exit 1; }
+
+rm -rf "$app"
+mkdir -p "$macos_dir" "$res_dir"
+cp "$bin" "$macos_dir/BaazMenuBar"
+
+cat > "$app/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key><string>Baaz</string>
+	<key>CFBundleDisplayName</key><string>Baaz</string>
+	<key>CFBundleExecutable</key><string>BaazMenuBar</string>
+	<key>CFBundleIdentifier</key><string>com.shahriyar.baaz.menubar</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>${version}</string>
+	<key>CFBundleVersion</key><string>${version}</string>
+	<key>CFBundleIconFile</key><string>Baaz</string>
+	<key>LSMinimumSystemVersion</key><string>13.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<!-- Menu bar only: no Dock tile, no app switcher entry, no main window. -->
+	<key>LSUIElement</key><true/>
+</dict>
+</plist>
+PLIST
+
+# Icon: reuse the extension artwork. Only Finder ever shows it (LSUIElement
+# hides the Dock tile), so the largest PNG on hand is enough.
+tmp="$(mktemp -d)"
+iconset="$tmp/Baaz.iconset"
+mkdir -p "$iconset"
+for size in 16 32 128; do
+  src="$root/extension/icons/icon${size}.png"
+  [ -f "$src" ] || continue
+  cp "$src" "$iconset/icon_${size}x${size}.png"
+done
+if [ -f "$root/extension/icons/icon128.png" ]; then
+  sips -z 256 256 "$root/extension/icons/icon128.png" \
+    --out "$iconset/icon_128x128@2x.png" >/dev/null 2>&1 || true
+fi
+iconutil -c icns "$iconset" -o "$res_dir/Baaz.icns" 2>/dev/null \
+  || echo "make-app: no icns produced (harmless — the menu bar app has no Dock icon)"
+rm -rf "$tmp"
+
+# Ad-hoc signature. Unsigned bundles are killed on arm64; this is not
+# notarization, it just makes the binary loadable on this machine.
+codesign --force --deep --sign - "$app" >/dev/null 2>&1 \
+  || echo "make-app: ad-hoc codesign failed (app may not launch)"
+
+echo "built $app"

@@ -84,6 +84,36 @@ Panel {
     if (p) p.running = true
   }
 
+  // IDs whose segment breakdown is open. Kept on the panel, not the row, so
+  // it survives the Repeater rebuilding on every snapshot.
+  property var expanded: ({})
+
+  function toggleExpanded(id) {
+    var e = {}
+    for (var k in root.expanded) e[k] = root.expanded[k]
+    if (e[id]) delete e[id]; else e[id] = true
+    root.expanded = e
+  }
+
+  function isExpanded(id) { return root.expanded[id] === true }
+
+  function segmentSummary(j) {
+    var segs = j.segments || []
+    if (segs.length <= 1)
+      // One range means the server refused to split it, which explains why
+      // this download is no faster than the browser's.
+      return "1 part — this server doesn't support splitting"
+    var done = 0
+    for (var i = 0; i < segs.length; i++)
+      if (segs[i].total > 0 && segs[i].done >= segs[i].total) done++
+    return segs.length + " parts in parallel · " + done + " finished"
+  }
+
+  function segFraction(seg) {
+    if (!seg || seg.total <= 0) return 0
+    return Math.min(1, seg.done / seg.total)
+  }
+
   readonly property var cfg: (snapshot && snapshot.settings) ? snapshot.settings : ({})
 
   function setCfg(key, value) {
@@ -328,9 +358,62 @@ Panel {
                 Text {
                   width: parent.width
                   text: root.jobCaption(liveRow.modelData)
+                    + ((liveRow.modelData.segments && liveRow.modelData.segments.length)
+                        ? (root.isExpanded(liveRow.modelData.id) ? "  ▾" : "  ▸") : "")
                   elide: Text.ElideRight
                   color: liveRow.modelData.state === "failed" ? Color.urgent : Color.foreground
                   opacity: liveRow.modelData.state === "failed" ? 0.9 : 0.45
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                }
+
+                // The file drawn as its actual byte ranges: one chunk per
+                // segment, each filling on its own. Eight chunks advancing at
+                // their own rates is what eight parallel connections look like.
+                Row {
+                  id: segRow
+                  width: parent.width
+                  height: Style.space(5)
+                  spacing: 1
+                  visible: root.isExpanded(liveRow.modelData.id)
+                           && (liveRow.modelData.segments || []).length > 0
+
+                  readonly property var segs: liveRow.modelData.segments || []
+                  readonly property real cell:
+                    segs.length > 0
+                      ? Math.max(0, (width - (segs.length - 1)) / segs.length)
+                      : 0
+
+                  Repeater {
+                    model: segRow.segs
+
+                    Rectangle {
+                      required property var modelData
+                      width: segRow.cell
+                      height: segRow.height
+                      radius: 1
+                      color: Qt.alpha(Color.foreground, 0.15)
+
+                      Rectangle {
+                        width: parent.width * root.segFraction(parent.modelData)
+                        height: parent.height
+                        radius: parent.radius
+                        // A finished chunk is already a full bar; brightening
+                        // it would need a theme color this shell does not
+                        // define (accent/foreground/urgent are all there is).
+                        color: Color.accent
+                      }
+                    }
+                  }
+                }
+
+                Text {
+                  width: parent.width
+                  visible: segRow.visible
+                  text: root.segmentSummary(liveRow.modelData)
+                  elide: Text.ElideRight
+                  color: Color.foreground
+                  opacity: 0.35
                   font.family: Style.font.family
                   font.pixelSize: Style.font.caption
                 }
@@ -364,7 +447,13 @@ Panel {
                 id: liveHover
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.NoButton
+                acceptedButtons: Qt.LeftButton
+                cursorShape: (liveRow.modelData.segments || []).length
+                             ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: {
+                  if ((liveRow.modelData.segments || []).length)
+                    root.toggleExpanded(liveRow.modelData.id)
+                }
               }
             }
           }

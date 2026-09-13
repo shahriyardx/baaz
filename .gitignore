@@ -1,3 +1,6 @@
 /baaz
 *.part
 /dm
+/build/
+macos/menubar/.build/
+.DS_Store

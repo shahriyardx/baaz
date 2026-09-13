@@ -8,13 +8,11 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"baaz"
 
@@ -28,7 +26,7 @@ import (
 // Overridden by -ldflags "-X main.version=..." in release builds.
 var version = "dev"
 
-const usage = `baaz — segmented download manager
+var usage = `baaz — segmented download manager
 
 Usage:
   baaz add URL [--out NAME]     queue a download (starts daemon if needed)
@@ -38,13 +36,13 @@ Usage:
   baaz clear                    clear the finished list (files stay)
   baaz on | off                 enable / disable Chrome interception
   baaz config [KEY VALUE]       show or change settings
-                              keys: intercept segments max-active min-size dir
+                                keys: intercept categorize segments
+                                      max-active min-size dir
   baaz status [--json]          one-shot status (--json = snapshot schema)
   baaz watch                    stream JSON snapshots (for the bar widget)
   baaz daemon                   run the daemon in the foreground
   baaz install-chrome           install the Chrome native-messaging manifest
-  baaz install-bar              install + enable the Omarchy bar widget
-`
+` + widgetUsage
 
 func main() {
 	if len(os.Args) < 2 {
@@ -86,8 +84,8 @@ func main() {
 		err = cmdConfig(os.Args[2:])
 	case "install-chrome":
 		err = cmdInstallChrome(os.Args[2:])
-	case "install-bar":
-		err = cmdInstallBar()
+	case "install-bar", "install-menubar":
+		err = cmdInstallWidget()
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	case "help", "-h", "--help":
@@ -228,13 +226,17 @@ func cmdConfig(args []string) error {
 		return fmt.Errorf("%s", resp.Error)
 	}
 	s := resp.Snapshot.Settings
-	state := "off"
-	if s.Intercept {
-		state = "on"
-	}
-	fmt.Printf("intercept   %s\nsegments    %d\nmax-active  %d\nmin-size    %d MB\ndir         %s\n",
-		state, s.Segments, s.MaxActive, s.MinSizeMB, s.DownloadDir)
+	fmt.Printf("intercept   %s\ncategorize  %s\nsegments    %d\nmax-active  %d\nmin-size    %d MB\ndir         %s\n",
+		onOff(s.Intercept), onOff(s.Categorize),
+		s.Segments, s.MaxActive, s.MinSizeMB, s.DownloadDir)
 	return nil
+}
+
+func onOff(v bool) string {
+	if v {
+		return "on"
+	}
+	return "off"
 }
 
 func cmdStatus(asJSON bool) error {
@@ -332,10 +334,7 @@ func cmdInstallChrome(args []string) error {
 		return err
 	}
 	manifest := fmt.Sprintf(nmManifestTmpl, self, *extID)
-	for _, dir := range []string{
-		filepath.Join(home, ".config", "google-chrome", "NativeMessagingHosts"),
-		filepath.Join(home, ".config", "chromium", "NativeMessagingHosts"),
-	} {
+	for _, dir := range nmHostDirs(home) {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
@@ -351,57 +350,25 @@ func cmdInstallChrome(args []string) error {
 	return nil
 }
 
-// installExtension packs the embedded extension into a crx and registers it
-// as a Chrome "external extension", so a restart installs it — no unpacked
-// loading, no developer mode. Root only (the registry dirs live in /usr).
-func installExtension() {
-	if os.Geteuid() != 0 {
-		fmt.Println("\nrun with sudo to also auto-install the extension into Chrome:")
-		fmt.Println("  " + sudoHint())
-		return
-	}
-	src, err := fs.Sub(assets.Extension, "extension")
+// extensionAssets returns the embedded extension tree, its packed crx bytes,
+// the extension ID the signing key produces, and the manifest version.
+// Each platform installs these differently — see installExtension in
+// platform_<goos>.go.
+func extensionAssets() (src fs.FS, crxData []byte, id, version string, err error) {
+	src, err = fs.Sub(assets.Extension, "extension")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "dm: embed:", err)
-		return
+		return nil, nil, "", "", fmt.Errorf("embed: %w", err)
 	}
-	data, id, err := crx.Pack(src, assets.ExtensionKey)
+	crxData, id, err = crx.Pack(src, assets.ExtensionKey)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "dm: pack extension:", err)
-		return
+		return nil, nil, "", "", fmt.Errorf("pack extension: %w", err)
 	}
 	var m struct {
 		Version string `json:"version"`
 	}
 	raw, _ := fs.ReadFile(src, "manifest.json")
 	json.Unmarshal(raw, &m)
-
-	crxPath := "/usr/share/baaz/baaz.crx"
-	if err := os.MkdirAll(filepath.Dir(crxPath), 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	if err := os.WriteFile(crxPath, data, 0o644); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	fmt.Println("wrote", crxPath)
-
-	entry := fmt.Sprintf("{ \"external_crx\": %q, \"external_version\": %q }\n", crxPath, m.Version)
-	for _, dir := range []string{
-		"/usr/share/google-chrome/extensions",
-		"/usr/share/chromium/extensions",
-	} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			continue
-		}
-		path := filepath.Join(dir, id+".json")
-		if err := os.WriteFile(path, []byte(entry), 0o644); err != nil {
-			continue
-		}
-		fmt.Println("wrote", path)
-	}
-	fmt.Println("extension", id, "installs on next Chrome start (confirm the one-time “Enable” prompt)")
+	return src, crxData, id, m.Version, nil
 }
 
 // sudoHint prints the sudo re-run command with an absolute path, because
@@ -414,52 +381,6 @@ func sudoHint() string {
 	return "sudo " + self + " install-chrome"
 }
 
-const barPluginID = "shahriyardx.baaz"
-
-// cmdInstallBar copies the embedded Omarchy bar widget into the user's
-// plugin directory and enables it — the shell only discovers plugins there.
-func cmdInstallBar() error {
-	home, err := realUserHome()
-	if err != nil {
-		return err
-	}
-	dst := filepath.Join(home, ".config", "omarchy", "plugins", barPluginID)
-	if err := os.MkdirAll(dst, 0o755); err != nil {
-		return err
-	}
-	src, err := fs.Sub(assets.BarPlugin, "bar-plugin")
-	if err != nil {
-		return err
-	}
-	err = fs.WalkDir(src, ".", func(path string, d fs.DirEntry, werr error) error {
-		if werr != nil || d.IsDir() {
-			return werr
-		}
-		data, rerr := fs.ReadFile(src, path)
-		if rerr != nil {
-			return rerr
-		}
-		return os.WriteFile(filepath.Join(dst, path), data, 0o644)
-	})
-	if err != nil {
-		return err
-	}
-	fmt.Println("installed", dst)
-	for _, cmdline := range [][]string{
-		{"omarchy-shell", "shell", "rescanPlugins"},
-		{"omarchy", "plugin", "enable", barPluginID},
-		{"omarchy", "bar", "move", barPluginID, "--section", "right"},
-	} {
-		c := exec.Command(cmdline[0], cmdline[1:]...)
-		c.Stdout, c.Stderr = os.Stdout, os.Stderr
-		if err := c.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "baaz: %s failed (%v) — run it by hand\n", strings.Join(cmdline, " "), err)
-		}
-		time.Sleep(time.Second) // rescan is async; give the shell a beat
-	}
-	return nil
-}
-
 // realUserHome resolves the invoking user's home even under sudo, so
 // `sudo baaz install-chrome` still writes Chrome files into the right place.
 func realUserHome() (string, error) {
@@ -469,34 +390,4 @@ func realUserHome() (string, error) {
 		}
 	}
 	return os.UserHomeDir()
-}
-
-// installPolicy writes a managed policy that stops Chrome from asking where
-// to save each download — the dialog would otherwise appear before the
-// extension ever sees the download. Needs root; prints the command when run
-// without it.
-func installPolicy() {
-	const policy = `{ "PromptForDownloadLocation": false }` + "\n"
-	dirs := []string{
-		"/etc/opt/chrome/policies/managed",
-		"/etc/chromium/policies/managed",
-	}
-	var failed []string
-	for _, dir := range dirs {
-		path := filepath.Join(dir, "baaz-no-save-prompt.json")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			failed = append(failed, dir)
-			continue
-		}
-		if err := os.WriteFile(path, []byte(policy), 0o644); err != nil {
-			failed = append(failed, dir)
-			continue
-		}
-		fmt.Println("wrote", path)
-	}
-	if len(failed) > 0 {
-		fmt.Println("\nto also disable Chrome's save-location dialog system-wide, run:")
-		fmt.Println("  " + sudoHint())
-		fmt.Println("(or turn off chrome://settings/downloads → “Ask where to save …” by hand)")
-	}
 }

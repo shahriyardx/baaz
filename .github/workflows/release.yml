@@ -23,10 +23,60 @@ jobs:
       - name: Build
         run: |
           LDFLAGS="-s -w -X main.version=${GITHUB_REF_NAME#v}"
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="$LDFLAGS" -o baaz-linux-amd64 ./cmd/baaz
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="$LDFLAGS" -o baaz-linux-arm64 ./cmd/baaz
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+              go build -trimpath -ldflags="$LDFLAGS" -o "baaz-${os}-${arch}" ./cmd/baaz
+          done
+      - name: Check macOS binaries against XProtect adware signature
+        run: |
+          ./macos/xprotect-check.sh baaz-darwin-amd64
+          ./macos/xprotect-check.sh baaz-darwin-arm64
       - name: Test
         run: go test ./internal/...
+      - name: Package the extension for manual install
+        # macOS Chrome refuses to install a local .crx, so the extension also
+        # ships as the plain unpacked folder for "Load unpacked". Same bytes
+        # the binary embeds — extension/ is the single source.
+        run: |
+          rm -rf baaz-extension
+          cp -r extension baaz-extension
+          zip -qr baaz-extension.zip baaz-extension
+          rm -rf baaz-extension
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            baaz-linux-*
+            baaz-darwin-*
+            baaz-extension.zip
+
+  macos-app:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the menu bar app
+        run: swift test --package-path macos/menubar
+      - name: Build Baaz.app
+        run: ./macos/make-app.sh build "${GITHUB_REF_NAME#v}"
+      - name: Zip
+        # ditto preserves the bundle's symlinks and the ad-hoc signature;
+        # plain `zip` breaks both and the app will not launch.
+        run: ditto -c -k --keepParent build/Baaz.app Baaz-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: Baaz-macos.zip
+
+  release:
+    needs: [build, macos-app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
@@ -34,10 +84,14 @@ jobs:
           files: |
             baaz-linux-amd64
             baaz-linux-arm64
+            baaz-darwin-amd64
+            baaz-darwin-arm64
+            baaz-extension.zip
+            Baaz-macos.zip
             install.sh
 
   aur:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -1,7 +1,10 @@
 BIN     := $(HOME)/.local/bin/baaz
 PLUGIN  := $(HOME)/.config/omarchy/plugins/shahriyardx.baaz
+APP     := $(HOME)/Applications/Baaz.app
+BUILD   := build
 
-.PHONY: build test install install-plugin install-chrome uninstall
+.PHONY: build test install install-plugin install-chrome uninstall \
+        macos-app macos-test macos-install macos-check
 
 build:
 	go build -o baaz ./cmd/baaz
@@ -11,6 +14,7 @@ test:
 
 install: build
 	mkdir -p $(dir $(BIN))
+	rm -f $(BIN)
 	install -m 755 baaz $(BIN)
 	@echo "installed $(BIN)"
 
@@ -28,7 +32,36 @@ install-chrome: install
 
 uninstall:
 	-pkill -f 'baaz daemon'
+	-pkill -f 'BaazMenuBar'
+	-launchctl bootout gui/$(shell id -u)/com.shahriyar.baaz.menubar 2>/dev/null
 	rm -f $(BIN)
 	rm -rf $(PLUGIN)
+	rm -rf $(APP)
+	rm -f $(HOME)/Library/LaunchAgents/com.shahriyar.baaz.menubar.plist
 	rm -f $(HOME)/.config/google-chrome/NativeMessagingHosts/com.shahriyar.baaz.json
 	rm -f $(HOME)/.config/chromium/NativeMessagingHosts/com.shahriyar.baaz.json
+	rm -f "$(HOME)/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.shahriyar.baaz.json"
+	rm -f "$(HOME)/Library/Application Support/Chromium/NativeMessagingHosts/com.shahriyar.baaz.json"
+	rm -rf "$(HOME)/Downloads/baaz-extension"
+
+# ---------- macOS ----------
+
+# Baaz.app is the SwiftUI menu bar widget — the macOS counterpart to the
+# Omarchy bar plugin.
+macos-app:
+	./macos/make-app.sh $(BUILD)
+
+macos-test:
+	swift test --package-path macos/menubar
+
+# XProtect deletes Go binaries that match its adware signature; see the
+# script. Run this on anything shipped to users.
+macos-check: build
+	./macos/xprotect-check.sh baaz
+
+macos-install: macos-check macos-app
+	mkdir -p $(dir $(BIN))
+	rm -f $(BIN)
+	install -m 755 baaz $(BIN)
+	@echo "installed $(BIN)"
+	$(BIN) install-menubar
