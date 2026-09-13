@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "shahriyar.downloads",
+  "name": "Downloads",
+  "version": "0.1.0",
+  "author": "MD Shahriyar Alam",
+  "description": "Live progress for the dm download daemon, with recent downloads and open-folder actions",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Downloads",
+    "description": "Active download speed and recent downloads",
+    "category": "Utilities",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}

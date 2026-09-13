@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font: 13px system-ui, sans-serif; min-width: 220px; margin: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; gap: 8px; }
+  #dot { width: 10px; height: 10px; border-radius: 50%; background: #999; display: inline-block; }
+  #dot.up { background: #2f9e44; }
+  #dot.down { background: #cc3333; }
+  input[type=number] { width: 60px; }
+  #status { color: #666; }
+</style>
+</head>
+<body>
+  <div class="row"><strong>dm</strong><span><span id="dot"></span> <span id="status">checking…</span></span></div>
+  <div class="row"><label for="enabled">Intercept downloads</label><input type="checkbox" id="enabled"></div>
+  <div class="row"><label for="minSize">Min size (MB)</label><input type="number" id="minSize" min="0" step="1"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

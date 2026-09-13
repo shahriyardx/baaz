@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "dm — download manager",
+  "version": "0.1.0",
+  "description": "Hands browser downloads to the dm segmented download daemon",
+  "background": { "service_worker": "background.js" },
+  "permissions": ["downloads", "cookies", "nativeMessaging", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": { "default_popup": "popup.html", "default_title": "dm" }
+}

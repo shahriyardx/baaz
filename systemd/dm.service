@@ -1,0 +1,12 @@
+# Optional user unit. The daemon also auto-starts on first use, so this is
+# only for people who prefer systemd supervision:
+#   cp systemd/dm.service ~/.config/systemd/user/ && systemctl --user enable --now dm
+[Unit]
+Description=dm download manager daemon
+
+[Service]
+ExecStart=%h/.local/bin/dm daemon
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
