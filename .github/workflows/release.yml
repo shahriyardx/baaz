@@ -33,7 +33,7 @@ jobs:
           ./macos/xprotect-check.sh baaz-darwin-amd64
           ./macos/xprotect-check.sh baaz-darwin-arm64
       - name: Test
-        run: go test ./internal/...
+        run: go test ./...
       - name: Package the extension for manual install
         # macOS Chrome refuses to install a local .crx, so the extension also
         # ships as the plain unpacked folder for "Load unpacked". Same bytes

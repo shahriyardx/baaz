@@ -24,6 +24,18 @@ func nmHostDirs(home string) []string {
 	}
 }
 
+// chromeProfileRoots are the directories holding each browser's profile
+// folders (Default, Profile 1, …), each with its own Preferences.
+func chromeProfileRoots(home string) []string {
+	return []string{
+		filepath.Join(home, ".config", "google-chrome"),
+		filepath.Join(home, ".config", "chromium"),
+	}
+}
+
+// chromeProcessNames are what the running browser is called, for pgrep -x.
+func chromeProcessNames() []string { return []string{"chrome", "chromium"} }
+
 // crxInstallPath is where the packed extension lands for Chrome to read.
 func crxInstallPath() string { return "/usr/share/baaz/baaz.crx" }
 

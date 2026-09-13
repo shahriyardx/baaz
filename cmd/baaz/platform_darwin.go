@@ -34,6 +34,22 @@ func nmHostDirs(home string) []string {
 	}
 }
 
+// chromeProfileRoots are the directories holding each browser's profile
+// folders (Default, Profile 1, …), each with its own Preferences.
+func chromeProfileRoots(home string) []string {
+	support := filepath.Join(home, "Library", "Application Support")
+	return []string{
+		filepath.Join(support, "Google", "Chrome"),
+		filepath.Join(support, "Chromium"),
+	}
+}
+
+// chromeProcessNames are what the running browser is called, for pgrep -x.
+// macOS names the executable after the bundle, space and all — "chrome"
+// matches nothing here, so a check using it would report Chrome as closed
+// while it is running and happily edit a file Chrome rewrites on exit.
+func chromeProcessNames() []string { return []string{"Google Chrome", "Chromium"} }
+
 // installPolicy stops Chrome from asking where to save each download — the
 // dialog would otherwise appear before the extension ever sees the download.
 //

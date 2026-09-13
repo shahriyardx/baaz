@@ -16,8 +16,7 @@ import (
 
 func chromePrefFiles(home string) []string {
 	var out []string
-	for _, base := range []string{"google-chrome", "chromium"} {
-		root := filepath.Join(home, ".config", base)
+	for _, root := range chromeProfileRoots(home) {
 		entries, err := os.ReadDir(root)
 		if err != nil {
 			continue
@@ -80,7 +79,7 @@ func warnTombstones(home string) {
 }
 
 func chromeRunning() bool {
-	for _, name := range []string{"chrome", "chromium"} {
+	for _, name := range chromeProcessNames() {
 		if exec.Command("pgrep", "-x", name).Run() == nil {
 			return true
 		}
@@ -104,7 +103,11 @@ func cmdFixChrome() error {
 		if err != nil || !hasTombstone(d) {
 			continue
 		}
-		if err := os.WriteFile(p+".baaz-backup", mustJSON(d), 0o600); err != nil {
+		backup, err := json.Marshal(d)
+		if err != nil {
+			return fmt.Errorf("%s: %w", p, err)
+		}
+		if err := os.WriteFile(p+".baaz-backup", backup, 0o600); err != nil {
 			return err
 		}
 		ext := d["extensions"].(map[string]any)
@@ -126,7 +129,7 @@ func cmdFixChrome() error {
 				delete(apps, defaultExtID)
 			}
 		}
-		if err := os.WriteFile(p, mustJSON(d), 0o600); err != nil {
+		if err := writePrefs(p, d); err != nil {
 			return err
 		}
 		fmt.Println("unblocked", filepath.Base(filepath.Dir(p)), "(backup: Preferences.baaz-backup)")
@@ -140,7 +143,37 @@ func cmdFixChrome() error {
 	return nil
 }
 
-func mustJSON(d map[string]any) []byte {
-	data, _ := json.Marshal(d)
-	return data
+// writePrefs replaces a Preferences file atomically.
+//
+// Two things matter here, because this is the file that holds the user's
+// entire Chrome profile. A marshal error must abort rather than write what
+// it returned — writing nil would truncate Preferences to nothing and reset
+// the profile. And the replacement goes through a temp file in the same
+// directory plus a rename, so an interrupted write cannot leave a partial
+// file behind either.
+func writePrefs(path string, d map[string]any) error {
+	data, err := json.Marshal(d)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".baaz-prefs-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp.Name(), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }
