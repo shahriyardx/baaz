@@ -1,6 +1,6 @@
 // Package ipc defines the JSON-lines protocol spoken over the daemon's unix
 // socket. protocol.go is the single source of truth for the schema consumed
-// by the CLI, `dm watch`, the native-messaging host, and the bar widget.
+// by the CLI, `baaz watch`, the native-messaging host, and the bar widget.
 package ipc
 
 type Request struct {
@@ -46,7 +46,7 @@ type JobInfo struct {
 }
 
 // Snapshot is the full state pushed to `watch` subscribers and returned by
-// `dm status --json`.
+// `baaz status --json`.
 type Snapshot struct {
 	Type       string    `json:"type"` // always "snapshot"
 	Active     int       `json:"active"`

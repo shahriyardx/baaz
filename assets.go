@@ -1,4 +1,4 @@
-// Package assets embeds what `dm install-chrome` deploys: the extension
+// Package assets embeds what `baaz install-chrome` deploys: the extension
 // source and the key that fixes its extension ID.
 //
 // The private key is committed on purpose: it only pins the local extension

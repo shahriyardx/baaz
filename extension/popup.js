@@ -11,7 +11,7 @@ chrome.storage.local.get(DEFAULTS).then((s) => {
 enabledEl.addEventListener("change", () =>
   chrome.storage.local.set({ enabled: enabledEl.checked }));
 
-chrome.runtime.sendNativeMessage("com.shahriyar.dm", { type: "ping" }, (reply) => {
+chrome.runtime.sendNativeMessage("com.shahriyar.baaz", { type: "ping" }, (reply) => {
   if (chrome.runtime.lastError || !reply || !reply.ok) {
     dotEl.className = "down";
     statusEl.textContent = "daemon unreachable";
@@ -20,7 +20,7 @@ chrome.runtime.sendNativeMessage("com.shahriyar.dm", { type: "ping" }, (reply) =
   const n = reply.active || 0;
   if (reply.intercept === false) {
     dotEl.className = "down";
-    statusEl.textContent = "intercept off (dm on)";
+    statusEl.textContent = "intercept off (baaz on)";
   } else {
     dotEl.className = "up";
     statusEl.textContent = n ? `${n} active` : "idle";

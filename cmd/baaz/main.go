@@ -14,28 +14,28 @@ import (
 	"strings"
 	"syscall"
 
-	"dm"
+	"baaz"
 
-	"dm/internal/config"
-	"dm/internal/crx"
-	"dm/internal/daemon"
-	"dm/internal/ipc"
-	"dm/internal/nmhost"
+	"baaz/internal/config"
+	"baaz/internal/crx"
+	"baaz/internal/daemon"
+	"baaz/internal/ipc"
+	"baaz/internal/nmhost"
 )
 
-const usage = `dm — segmented download manager
+const usage = `baaz — segmented download manager
 
 Usage:
-  dm add URL [--out NAME]     queue a download (starts daemon if needed)
-  dm ls                       list downloads
-  dm pause|resume|cancel ID   control a download
-  dm on | off                 enable / disable Chrome interception
-  dm config [KEY VALUE]       show or change settings
+  baaz add URL [--out NAME]     queue a download (starts daemon if needed)
+  baaz ls                       list downloads
+  baaz pause|resume|cancel ID   control a download
+  baaz on | off                 enable / disable Chrome interception
+  baaz config [KEY VALUE]       show or change settings
                               keys: intercept segments max-active min-size dir
-  dm status [--json]          one-shot status (--json = snapshot schema)
-  dm watch                    stream JSON snapshots (for the bar widget)
-  dm daemon                   run the daemon in the foreground
-  dm install-chrome           install the Chrome native-messaging manifest
+  baaz status [--json]          one-shot status (--json = snapshot schema)
+  baaz watch                    stream JSON snapshots (for the bar widget)
+  baaz daemon                   run the daemon in the foreground
+  baaz install-chrome           install the Chrome native-messaging manifest
 `
 
 func main() {
@@ -83,7 +83,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "dm:", err)
+		fmt.Fprintln(os.Stderr, "baaz:", err)
 		os.Exit(1)
 	}
 }
@@ -140,7 +140,7 @@ func cmdAdd(args []string) error {
 	out := fs.String("out", "", "output filename")
 	fs.Parse(args)
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: dm add URL [--out NAME]")
+		return fmt.Errorf("usage: baaz add URL [--out NAME]")
 	}
 	c, err := dial()
 	if err != nil {
@@ -160,7 +160,7 @@ func cmdAdd(args []string) error {
 
 func cmdControl(cmd string, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: dm %s ID", cmd)
+		return fmt.Errorf("usage: baaz %s ID", cmd)
 	}
 	c, err := dial()
 	if err != nil {
@@ -187,7 +187,7 @@ func cmdConfig(args []string) error {
 	if len(args) == 2 {
 		req = &ipc.Request{Cmd: "setconfig", Settings: map[string]string{args[0]: args[1]}}
 	} else if len(args) != 0 {
-		return fmt.Errorf("usage: dm config [KEY VALUE]")
+		return fmt.Errorf("usage: baaz config [KEY VALUE]")
 	}
 	resp, err := c.Do(req)
 	if err != nil {
@@ -272,8 +272,8 @@ func human(n int64) string {
 }
 
 const nmManifestTmpl = `{
-  "name": "com.shahriyar.dm",
-  "description": "dm download manager",
+  "name": "com.shahriyar.baaz",
+  "description": "baaz download manager",
   "path": "%s",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://%s/"]
@@ -308,7 +308,7 @@ func cmdInstallChrome(args []string) error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
-		path := filepath.Join(dir, "com.shahriyar.dm.json")
+		path := filepath.Join(dir, "com.shahriyar.baaz.json")
 		if err := os.WriteFile(path, []byte(manifest), 0o644); err != nil {
 			return err
 		}
@@ -345,13 +345,13 @@ func installExtension() {
 	raw, _ := fs.ReadFile(src, "manifest.json")
 	json.Unmarshal(raw, &m)
 
-	crxPath := "/usr/share/dm/dm.crx"
+	crxPath := "/usr/share/baaz/baaz.crx"
 	if err := os.MkdirAll(filepath.Dir(crxPath), 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "dm:", err)
+		fmt.Fprintln(os.Stderr, "baaz:", err)
 		return
 	}
 	if err := os.WriteFile(crxPath, data, 0o644); err != nil {
-		fmt.Fprintln(os.Stderr, "dm:", err)
+		fmt.Fprintln(os.Stderr, "baaz:", err)
 		return
 	}
 	fmt.Println("wrote", crxPath)
@@ -378,13 +378,13 @@ func installExtension() {
 func sudoHint() string {
 	self, err := os.Executable()
 	if err != nil {
-		return "sudo dm install-chrome"
+		return "sudo baaz install-chrome"
 	}
 	return "sudo " + self + " install-chrome"
 }
 
 // realUserHome resolves the invoking user's home even under sudo, so
-// `sudo dm install-chrome` still writes Chrome files into the right place.
+// `sudo baaz install-chrome` still writes Chrome files into the right place.
 func realUserHome() (string, error) {
 	if su := os.Getenv("SUDO_USER"); su != "" && os.Geteuid() == 0 {
 		if u, err := user.Lookup(su); err == nil {
@@ -406,7 +406,7 @@ func installPolicy() {
 	}
 	var failed []string
 	for _, dir := range dirs {
-		path := filepath.Join(dir, "dm-no-save-prompt.json")
+		path := filepath.Join(dir, "baaz-no-save-prompt.json")
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			failed = append(failed, dir)
 			continue

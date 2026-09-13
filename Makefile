@@ -1,17 +1,17 @@
-BIN     := $(HOME)/.local/bin/dm
+BIN     := $(HOME)/.local/bin/baaz
 PLUGIN  := $(HOME)/.config/omarchy/plugins/shahriyar.downloads
 
 .PHONY: build test install install-plugin install-chrome uninstall
 
 build:
-	go build -o dm ./cmd/dm
+	go build -o baaz ./cmd/baaz
 
 test:
 	go test ./...
 
 install: build
 	mkdir -p $(dir $(BIN))
-	install -m 755 dm $(BIN)
+	install -m 755 baaz $(BIN)
 	@echo "installed $(BIN)"
 
 install-plugin:
@@ -27,8 +27,8 @@ install-chrome: install
 	$(BIN) install-chrome --ext-id $(EXT_ID)
 
 uninstall:
-	-pkill -f 'dm daemon'
+	-pkill -f 'baaz daemon'
 	rm -f $(BIN)
 	rm -rf $(PLUGIN)
-	rm -f $(HOME)/.config/google-chrome/NativeMessagingHosts/com.shahriyar.dm.json
-	rm -f $(HOME)/.config/chromium/NativeMessagingHosts/com.shahriyar.dm.json
+	rm -f $(HOME)/.config/google-chrome/NativeMessagingHosts/com.shahriyar.baaz.json
+	rm -f $(HOME)/.config/chromium/NativeMessagingHosts/com.shahriyar.baaz.json

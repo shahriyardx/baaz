@@ -4,7 +4,7 @@
   "name": "Downloads",
   "version": "0.1.0",
   "author": "MD Shahriyar Alam",
-  "description": "Live progress for the dm download daemon, with recent downloads and open-folder actions",
+  "description": "Live progress for the baaz download daemon, with recent downloads and open-folder actions",
   "kinds": [
     "bar-widget"
   ],

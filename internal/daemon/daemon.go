@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"dm/internal/config"
-	"dm/internal/downloader"
-	"dm/internal/ipc"
+	"baaz/internal/config"
+	"baaz/internal/downloader"
+	"baaz/internal/ipc"
 )
 
 const (
@@ -110,7 +110,7 @@ func (m *Manager) Shutdown() {
 
 // notify sends a desktop notification; failures are irrelevant.
 func notify(title, body string) {
-	go exec.Command("notify-send", "-a", "dm", "-i", "folder-download", title, body).Run()
+	go exec.Command("notify-send", "-a", "baaz", "-i", "folder-download", title, body).Run()
 }
 
 func newID() string {

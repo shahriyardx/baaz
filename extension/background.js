@@ -1,10 +1,10 @@
-// dm interceptor: hand browser downloads to the local dm daemon.
+// baaz interceptor: hand browser downloads to the local baaz daemon.
 //
 // Uses downloads.onDeterminingFilename because doing nothing lets the
 // browser download proceed untouched — so every failure path (daemon dead,
 // native host missing, timeout) degrades to a normal browser download.
 
-const HOST = "com.shahriyar.dm";
+const HOST = "com.shahriyar.baaz";
 const NATIVE_TIMEOUT_MS = 3000;
 
 const DEFAULTS = { enabled: true };
@@ -76,13 +76,13 @@ async function intercept(item) {
       userAgent: navigator.userAgent,
     });
   } catch (e) {
-    console.warn("dm unreachable, falling back to browser download:", e.message);
+    console.warn("baaz unreachable, falling back to browser download:", e.message);
     flagFallback();
     return;
   }
   if (!reply || !reply.ok) {
     if (reply && reply.rejected) return; // intercept off or below min size
-    console.warn("dm error:", reply && reply.error);
+    console.warn("baaz error:", reply && reply.error);
     flagFallback();
     return;
   }
@@ -104,5 +104,5 @@ async function intercept(item) {
 
 chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
   suggest(); // pass-through; the async work below decides interception
-  intercept(item).catch((e) => console.error("dm intercept error:", e));
+  intercept(item).catch((e) => console.error("baaz intercept error:", e));
 });

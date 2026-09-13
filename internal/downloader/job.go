@@ -100,7 +100,7 @@ func (j *Job) Stop() {
 }
 
 func (j *Job) partPath() string {
-	return filepath.Join(j.Dir, fmt.Sprintf(".%s.dm.part", j.ID))
+	return filepath.Join(j.Dir, fmt.Sprintf(".%s.baaz.part", j.ID))
 }
 
 var errRangeNotSupported = errors.New("server does not honor Range requests")

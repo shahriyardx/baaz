@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"dm/internal/config"
-	"dm/internal/ipc"
+	"baaz/internal/config"
+	"baaz/internal/ipc"
 )
 
 const maxOutbound = 1 << 20 // Chrome rejects host->browser messages over 1 MB

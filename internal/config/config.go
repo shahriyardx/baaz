@@ -47,7 +47,7 @@ func (c *Config) Save() error {
 	return os.WriteFile(filepath.Join(dir, "config.json"), append(data, '\n'), 0o644)
 }
 
-// Load reads ~/.config/dm/config.json, falling back to defaults for any
+// Load reads ~/.config/baaz/config.json, falling back to defaults for any
 // missing field or a missing/broken file.
 func Load() *Config {
 	c := Default()
@@ -88,18 +88,18 @@ func ExpandHome(p string) string {
 
 func configDir() string {
 	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return filepath.Join(d, "dm")
+		return filepath.Join(d, "baaz")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "dm")
+	return filepath.Join(home, ".config", "baaz")
 }
 
 func DataDir() string {
 	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
-		return filepath.Join(d, "dm")
+		return filepath.Join(d, "baaz")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".local", "share", "dm")
+	return filepath.Join(home, ".local", "share", "baaz")
 }
 
 func JobsDir() string { return filepath.Join(DataDir(), "jobs") }
@@ -110,7 +110,7 @@ func PidPath() string { return filepath.Join(DataDir(), "daemon.pid") }
 
 func SocketPath() string {
 	if d := os.Getenv("XDG_RUNTIME_DIR"); d != "" {
-		return filepath.Join(d, "dm.sock")
+		return filepath.Join(d, "baaz.sock")
 	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("dm-%d.sock", os.Getuid()))
+	return filepath.Join(os.TempDir(), fmt.Sprintf("baaz-%d.sock", os.Getuid()))
 }

@@ -18,7 +18,7 @@ type Client struct {
 }
 
 // Dial connects to the daemon socket. With autoStart, a dead socket causes a
-// detached `dm daemon` spawn and a short connect retry loop — identical
+// detached `baaz daemon` spawn and a short connect retry loop — identical
 // behavior for the CLI, the native-messaging host, and the bar widget.
 func Dial(socketPath, logPath string, autoStart bool) (*Client, error) {
 	conn, err := net.DialTimeout("unix", socketPath, time.Second)

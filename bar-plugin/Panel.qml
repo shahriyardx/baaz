@@ -4,9 +4,9 @@ import Quickshell.Io
 import qs.Ui
 import qs.Commons
 
-// Downloads bar widget for the dm daemon.
+// Downloads bar widget for the baaz daemon.
 //
-// A long-lived `dm watch` process streams JSON snapshots (one per line);
+// A long-lived `baaz watch` process streams JSON snapshots (one per line);
 // launching it also auto-starts the daemon. The widget therefore never
 // polls — it renders whatever the last snapshot said. If the process dies
 // (daemon killed, binary missing) a one-shot timer restarts it after a
@@ -19,7 +19,7 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
-  // Last snapshot from `dm watch`: { active, totalSpeed, jobs, recent }
+  // Last snapshot from `baaz watch`: { active, totalSpeed, jobs, recent }
   property var snapshot: ({ active: 0, totalSpeed: 0, jobs: [], recent: [] })
   property bool daemonUp: false
 
@@ -78,8 +78,8 @@ Panel {
   }
 
   function act(verb, id) {
-    // Login shell so ~/.local/bin/dm is found regardless of the shell's PATH.
-    var p = actProc.createObject(root, { command: ["bash", "-lc", "dm " + verb + " " + id] })
+    // Login shell so ~/.local/bin/baaz is found regardless of the shell's PATH.
+    var p = actProc.createObject(root, { command: ["bash", "-lc", "baaz " + verb + " " + id] })
     if (p) p.running = true
   }
 
@@ -97,7 +97,7 @@ Panel {
   }
 
   // Reloads and rescans destroy the widget; without this the spawned
-  // `dm watch` would outlive it and pile up.
+  // `baaz watch` would outlive it and pile up.
   Component.onDestruction: {
     restartTimer.stop()
     watchProc.running = false
@@ -105,7 +105,7 @@ Panel {
 
   Process {
     id: watchProc
-    command: ["bash", "-lc", "exec dm watch"]
+    command: ["bash", "-lc", "exec baaz watch"]
     running: true
     stdout: SplitParser {
       onRead: function(line) {
