@@ -19,7 +19,7 @@ and an Omarchy (Quickshell) bar widget with live progress.
 
 ```sh
 make install           # builds and installs ~/.local/bin/baaz
-make install-plugin    # installs + enables the bar widget
+baaz install-bar       # installs + enables the Omarchy bar widget (embedded in the binary)
 ```
 
 Chrome setup — one command:

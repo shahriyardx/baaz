@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "shahriyar.downloads",
-  "name": "Downloads",
+  "id": "shahriyardx.baaz",
+  "name": "baaz",
   "version": "0.1.0",
   "author": "MD Shahriyar Alam",
   "description": "Live progress for the baaz download daemon, with recent downloads and open-folder actions",

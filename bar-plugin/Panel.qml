@@ -13,8 +13,8 @@ import qs.Commons
 // pause, so the shell never spins.
 Panel {
   id: root
-  moduleName: "shahriyar.downloads"
-  ipcTarget: "shahriyar.downloads"
+  moduleName: "shahriyardx.baaz"
+  ipcTarget: "shahriyardx.baaz"
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -472,7 +472,7 @@ Panel {
                 spacing: Style.space(6)
 
                 PanelActionButton {
-                  iconText: ""
+                  iconText: "\uf068"
                   tooltipText: "Less"
                   foreground: Color.foreground
                   enabled: cfgRow.modelData.value > cfgRow.modelData.min
@@ -489,7 +489,7 @@ Panel {
                 }
 
                 PanelActionButton {
-                  iconText: ""
+                  iconText: "\uf067"
                   tooltipText: "More"
                   foreground: Color.foreground
                   enabled: cfgRow.modelData.value < cfgRow.modelData.max

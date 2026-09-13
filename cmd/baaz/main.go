@@ -8,11 +8,13 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"baaz"
 
@@ -36,6 +38,7 @@ Usage:
   baaz watch                    stream JSON snapshots (for the bar widget)
   baaz daemon                   run the daemon in the foreground
   baaz install-chrome           install the Chrome native-messaging manifest
+  baaz install-bar              install + enable the Omarchy bar widget
 `
 
 func main() {
@@ -76,6 +79,8 @@ func main() {
 		err = cmdConfig(os.Args[2:])
 	case "install-chrome":
 		err = cmdInstallChrome(os.Args[2:])
+	case "install-bar":
+		err = cmdInstallBar()
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
@@ -126,7 +131,7 @@ func runDaemon() error {
 	}()
 
 	mgr.Start(ctx)
-	log.Println("dm daemon listening on", config.SocketPath())
+	log.Println("baaz daemon listening on", config.SocketPath())
 	defer os.Remove(config.SocketPath())
 	return srv.Serve(ctx)
 }
@@ -381,6 +386,52 @@ func sudoHint() string {
 		return "sudo baaz install-chrome"
 	}
 	return "sudo " + self + " install-chrome"
+}
+
+const barPluginID = "shahriyardx.baaz"
+
+// cmdInstallBar copies the embedded Omarchy bar widget into the user's
+// plugin directory and enables it — the shell only discovers plugins there.
+func cmdInstallBar() error {
+	home, err := realUserHome()
+	if err != nil {
+		return err
+	}
+	dst := filepath.Join(home, ".config", "omarchy", "plugins", barPluginID)
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	src, err := fs.Sub(assets.BarPlugin, "bar-plugin")
+	if err != nil {
+		return err
+	}
+	err = fs.WalkDir(src, ".", func(path string, d fs.DirEntry, werr error) error {
+		if werr != nil || d.IsDir() {
+			return werr
+		}
+		data, rerr := fs.ReadFile(src, path)
+		if rerr != nil {
+			return rerr
+		}
+		return os.WriteFile(filepath.Join(dst, path), data, 0o644)
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Println("installed", dst)
+	for _, cmdline := range [][]string{
+		{"omarchy-shell", "shell", "rescanPlugins"},
+		{"omarchy", "plugin", "enable", barPluginID},
+		{"omarchy", "bar", "move", barPluginID, "--section", "right"},
+	} {
+		c := exec.Command(cmdline[0], cmdline[1:]...)
+		c.Stdout, c.Stderr = os.Stdout, os.Stderr
+		if err := c.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "baaz: %s failed (%v) — run it by hand\n", strings.Join(cmdline, " "), err)
+		}
+		time.Sleep(time.Second) // rescan is async; give the shell a beat
+	}
+	return nil
 }
 
 // realUserHome resolves the invoking user's home even under sudo, so

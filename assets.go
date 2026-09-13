@@ -13,3 +13,6 @@ var Extension embed.FS
 
 //go:embed keys/extension-key.pem
 var ExtensionKey []byte
+
+//go:embed all:bar-plugin
+var BarPlugin embed.FS

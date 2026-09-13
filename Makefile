@@ -1,5 +1,5 @@
 BIN     := $(HOME)/.local/bin/baaz
-PLUGIN  := $(HOME)/.config/omarchy/plugins/shahriyar.downloads
+PLUGIN  := $(HOME)/.config/omarchy/plugins/shahriyardx.baaz
 
 .PHONY: build test install install-plugin install-chrome uninstall
 
@@ -18,8 +18,8 @@ install-plugin:
 	mkdir -p $(PLUGIN)
 	install -m 644 bar-plugin/manifest.json bar-plugin/Panel.qml $(PLUGIN)/
 	omarchy-shell shell rescanPlugins || true
-	omarchy plugin enable shahriyar.downloads || true
-	omarchy bar move shahriyar.downloads --section right || true
+	omarchy plugin enable shahriyardx.baaz || true
+	omarchy bar move shahriyardx.baaz --section right || true
 	@echo "bar plugin installed"
 
 # usage: make install-chrome EXT_ID=<id from chrome://extensions>
