@@ -3,19 +3,104 @@
 <head>
 <meta charset="utf-8">
 <style>
-  body { font: 13px system-ui, sans-serif; min-width: 220px; margin: 12px; }
-  .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; gap: 8px; }
-  #dot { width: 10px; height: 10px; border-radius: 50%; background: #999; display: inline-block; }
-  #dot.up { background: #2f9e44; }
-  #dot.down { background: #cc3333; }
-  input[type=number] { width: 60px; }
-  #status { color: #666; }
+  :root {
+    --bg: #15171c;
+    --surface: #1d2026;
+    --border: #2a2e36;
+    --text: #e8eaed;
+    --muted: #9aa0a8;
+    --accent: #4f8cff;
+    --ok: #34c759;
+    --bad: #ff5f56;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff;
+      --surface: #f4f5f7;
+      --border: #e2e4e8;
+      --text: #1b1e23;
+      --muted: #6b7280;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    width: 280px;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 14px;
+  }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .brand { display: flex; align-items: baseline; gap: 6px; }
+  .brand .name { font-size: 16px; font-weight: 700; letter-spacing: .2px; }
+  .brand .ver { font-size: 11px; color: var(--muted); }
+  .pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 99px; padding: 3px 10px; font-size: 11.5px; color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.up { background: var(--ok); }
+  .dot.down { background: var(--bad); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .row .label { font-weight: 500; }
+  .row .sub { font-size: 11.5px; color: var(--muted); }
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: var(--border); border-radius: 99px; transition: background .15s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 16px; height: 16px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%;
+    transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(16px); }
+  .stats { display: flex; gap: 8px; }
+  .stat {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .stat .num { font-size: 16px; font-weight: 700; }
+  .stat .cap { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .foot { margin-top: 12px; font-size: 11px; color: var(--muted); text-align: center; }
+  .foot code {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; font-size: 10.5px;
+  }
 </style>
 </head>
 <body>
-  <div class="row"><strong>baaz</strong><span><span id="dot"></span> <span id="status">checking…</span></span></div>
-  <div class="row"><label for="enabled">Extension active</label><input type="checkbox" id="enabled"></div>
-  <div class="row" style="color:#888">Settings: bar widget or <code>baaz config</code></div>
+  <div class="header">
+    <div class="brand"><span class="name">baaz</span><span class="ver" id="version"></span></div>
+    <div class="pill"><span class="dot" id="dot"></span><span id="status">checking…</span></div>
+  </div>
+
+  <div class="stats" style="margin-bottom:8px">
+    <div class="stat"><div class="num" id="active">–</div><div class="cap">Active</div></div>
+    <div class="stat"><div class="num" id="mode">–</div><div class="cap">Intercept</div></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="label">Extension active</div>
+        <div class="sub">Off = Chrome downloads normally</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="foot">Settings live in the bar widget or <code>baaz config</code></div>
   <script src="popup.js"></script>
 </body>
 </html>
