@@ -1,0 +1,319 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"os/user"
+	"path/filepath"
+	"strings"
+	"syscall"
+
+	"dm/internal/config"
+	"dm/internal/daemon"
+	"dm/internal/ipc"
+	"dm/internal/nmhost"
+)
+
+const usage = `dm — segmented download manager
+
+Usage:
+  dm add URL [--out NAME]     queue a download (starts daemon if needed)
+  dm ls                       list downloads
+  dm pause|resume|cancel ID   control a download
+  dm status [--json]          one-shot status (--json = snapshot schema)
+  dm watch                    stream JSON snapshots (for the bar widget)
+  dm daemon                   run the daemon in the foreground
+  dm install-chrome           install the Chrome native-messaging manifest
+`
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Print(usage)
+		os.Exit(2)
+	}
+	// Chrome launches the NM host as `<path> chrome-extension://<id>/ ...`;
+	// the host manifest cannot pass arguments, so detect the origin argv.
+	if strings.HasPrefix(os.Args[1], "chrome-extension://") {
+		if err := nmhost.Run(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	var err error
+	switch os.Args[1] {
+	case "daemon":
+		err = runDaemon()
+	case "nm-host":
+		err = nmhost.Run()
+	case "add":
+		err = cmdAdd(os.Args[2:])
+	case "ls":
+		err = cmdStatus(false)
+	case "status":
+		err = cmdStatus(len(os.Args) > 2 && os.Args[2] == "--json")
+	case "watch":
+		err = cmdWatch()
+	case "pause", "resume", "cancel":
+		err = cmdControl(os.Args[1], os.Args[2:])
+	case "install-chrome":
+		err = cmdInstallChrome(os.Args[2:])
+	case "help", "-h", "--help":
+		fmt.Print(usage)
+	default:
+		fmt.Print(usage)
+		os.Exit(2)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "dm:", err)
+		os.Exit(1)
+	}
+}
+
+func runDaemon() error {
+	if err := os.MkdirAll(config.DataDir(), 0o755); err != nil {
+		return err
+	}
+	// Single-instance lock. Losing the race to a live daemon is success.
+	pidf, err := os.OpenFile(config.PidPath(), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	if err := syscall.Flock(int(pidf.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if c, derr := ipc.Dial(config.SocketPath(), config.LogPath(), false); derr == nil {
+			c.Close()
+			log.Println("daemon already running; exiting")
+			return nil
+		}
+		return fmt.Errorf("another daemon holds the lock but its socket is dead")
+	}
+	pidf.Truncate(0)
+	fmt.Fprintf(pidf, "%d\n", os.Getpid())
+
+	cfg := config.Load()
+	mgr := daemon.NewManager(cfg)
+	srv, err := ipc.NewServer(config.SocketPath(), mgr)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sig
+		log.Println("shutting down")
+		mgr.Shutdown()
+		cancel()
+	}()
+
+	mgr.Start(ctx)
+	log.Println("dm daemon listening on", config.SocketPath())
+	defer os.Remove(config.SocketPath())
+	return srv.Serve(ctx)
+}
+
+func dial() (*ipc.Client, error) {
+	return ipc.Dial(config.SocketPath(), config.LogPath(), true)
+}
+
+func cmdAdd(args []string) error {
+	fs := flag.NewFlagSet("add", flag.ExitOnError)
+	out := fs.String("out", "", "output filename")
+	fs.Parse(args)
+	if fs.NArg() != 1 {
+		return fmt.Errorf("usage: dm add URL [--out NAME]")
+	}
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	resp, err := c.Do(&ipc.Request{Cmd: "add", URL: fs.Arg(0), Filename: *out})
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("%s", resp.Error)
+	}
+	fmt.Println(resp.ID)
+	return nil
+}
+
+func cmdControl(cmd string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: dm %s ID", cmd)
+	}
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	resp, err := c.Do(&ipc.Request{Cmd: cmd, ID: args[0]})
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("%s", resp.Error)
+	}
+	return nil
+}
+
+func cmdStatus(asJSON bool) error {
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	resp, err := c.Do(&ipc.Request{Cmd: "status"})
+	if err != nil {
+		return err
+	}
+	if !resp.OK {
+		return fmt.Errorf("%s", resp.Error)
+	}
+	if asJSON {
+		return json.NewEncoder(os.Stdout).Encode(resp.Snapshot)
+	}
+	snap := resp.Snapshot
+	if len(snap.Jobs) == 0 && len(snap.Recent) == 0 {
+		fmt.Println("no downloads")
+		return nil
+	}
+	for _, j := range snap.Jobs {
+		fmt.Printf("%-8s  %-7s  %6s  %9s/s  %s\n",
+			j.ID, j.State, percent(j.Done, j.Total), human(j.Speed), j.Name)
+	}
+	for _, j := range snap.Recent {
+		fmt.Printf("%-8s  %-7s  %6s  %11s  %s\n",
+			j.ID, j.State, "100%", human(j.Total), j.Name)
+	}
+	return nil
+}
+
+func cmdWatch() error {
+	c, err := dial()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	out := os.Stdout
+	return c.Watch(func(line []byte) bool {
+		out.Write(append(line, '\n'))
+		return true
+	})
+}
+
+func percent(done, total int64) string {
+	if total <= 0 {
+		return "?"
+	}
+	return fmt.Sprintf("%d%%", done*100/total)
+}
+
+func human(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return fmt.Sprintf("%.1fGB", float64(n)/(1<<30))
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1fMB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1fKB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%dB", n)
+	}
+}
+
+const nmManifestTmpl = `{
+  "name": "com.shahriyar.dm",
+  "description": "dm download manager",
+  "path": "%s",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://%s/"]
+}
+`
+
+// The extension manifest pins a public key, which makes the extension ID
+// deterministic no matter where or how it is loaded.
+const defaultExtID = "bekhpkepdgjmplfdclkflkkhbpbgeihl"
+
+func cmdInstallChrome(args []string) error {
+	fs := flag.NewFlagSet("install-chrome", flag.ExitOnError)
+	extID := fs.String("ext-id", defaultExtID, "Chrome extension ID override")
+	fs.Parse(args)
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	self, err = filepath.EvalSymlinks(self)
+	if err != nil {
+		return err
+	}
+	home, err := realUserHome()
+	if err != nil {
+		return err
+	}
+	manifest := fmt.Sprintf(nmManifestTmpl, self, *extID)
+	for _, dir := range []string{
+		filepath.Join(home, ".config", "google-chrome", "NativeMessagingHosts"),
+		filepath.Join(home, ".config", "chromium", "NativeMessagingHosts"),
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		path := filepath.Join(dir, "com.shahriyar.dm.json")
+		if err := os.WriteFile(path, []byte(manifest), 0o644); err != nil {
+			return err
+		}
+		fmt.Println("wrote", path)
+	}
+	fmt.Println("restart Chrome to pick up the native messaging host")
+	installPolicy()
+	return nil
+}
+
+// realUserHome resolves the invoking user's home even under sudo, so
+// `sudo dm install-chrome` still writes Chrome files into the right place.
+func realUserHome() (string, error) {
+	if su := os.Getenv("SUDO_USER"); su != "" && os.Geteuid() == 0 {
+		if u, err := user.Lookup(su); err == nil {
+			return u.HomeDir, nil
+		}
+	}
+	return os.UserHomeDir()
+}
+
+// installPolicy writes a managed policy that stops Chrome from asking where
+// to save each download — the dialog would otherwise appear before the
+// extension ever sees the download. Needs root; prints the command when run
+// without it.
+func installPolicy() {
+	const policy = `{ "PromptForDownloadLocation": false }` + "\n"
+	dirs := []string{
+		"/etc/opt/chrome/policies/managed",
+		"/etc/chromium/policies/managed",
+	}
+	var failed []string
+	for _, dir := range dirs {
+		path := filepath.Join(dir, "dm-no-save-prompt.json")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			failed = append(failed, dir)
+			continue
+		}
+		if err := os.WriteFile(path, []byte(policy), 0o644); err != nil {
+			failed = append(failed, dir)
+			continue
+		}
+		fmt.Println("wrote", path)
+	}
+	if len(failed) > 0 {
+		fmt.Println("\nto also disable Chrome's save-location dialog system-wide, run:")
+		fmt.Println(`  sudo dm install-chrome`)
+		fmt.Println("(or turn off chrome://settings/downloads → “Ask where to save …” by hand)")
+	}
+}
