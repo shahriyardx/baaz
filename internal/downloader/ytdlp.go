@@ -45,6 +45,7 @@ var (
 	ytDestRe     = regexp.MustCompile(`\[download\] Destination: (.+)$`)
 	ytMergeRe    = regexp.MustCompile(`\[Merger\] Merging formats into "(.+)"`)
 	ytExtractRe  = regexp.MustCompile(`\[ExtractAudio\] Destination: (.+)$`)
+	ytAlreadyRe  = regexp.MustCompile(`\[download\] (.+) has already been downloaded`)
 )
 
 // runYtdlp delegates a media-page URL to yt-dlp, translating its progress
@@ -63,7 +64,9 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	seg := j.Segments[0]
 	j.mu.Unlock()
 
-	outTmpl := filepath.Join(j.Dir, "%(title)s [%(id)s].%(ext)s")
+	// .120B truncates the title to 120 bytes: Facebook uses whole captions
+	// as titles, which blow past the 255-byte filename limit.
+	outTmpl := filepath.Join(j.Dir, "%(title).120B [%(id)s].%(ext)s")
 	args := []string{"--newline", "--no-playlist", "-c", "-o", outTmpl}
 	args = append(args, formatArgs(j.Format)...)
 	args = append(args, j.URL)
@@ -119,6 +122,12 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 			j.Filename = filepath.Base(lastPath)
 			j.mu.Unlock()
 		}
+		if m := ytAlreadyRe.FindStringSubmatch(line); m != nil {
+			lastPath = strings.TrimSpace(m[1])
+			j.mu.Lock()
+			j.Filename = filepath.Base(lastPath)
+			j.mu.Unlock()
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -138,14 +147,16 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	return nil
 }
 
-// formatArgs maps a quality preset to yt-dlp selector flags.
+// formatArgs maps a quality preset to yt-dlp flags. Quality uses -S res
+// sorting rather than a height filter: "res" is the smaller dimension, so
+// vertical videos (reels: 720x1280) work, and sorting always picks the
+// closest available format instead of erroring like a strict -f filter.
 func formatArgs(preset string) []string {
 	switch preset {
 	case "1080", "720", "480":
-		sel := fmt.Sprintf("bv*[height<=%s]+ba/b[height<=%s]", preset, preset)
-		return []string{"-f", sel}
+		return []string{"-S", "res:" + preset}
 	case "audio":
-		return []string{"-f", "bestaudio", "-x", "--audio-format", "mp3"}
+		return []string{"-f", "bestaudio/b", "-x", "--audio-format", "mp3"}
 	default: // "", "best"
 		return nil
 	}
