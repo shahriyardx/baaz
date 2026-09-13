@@ -393,6 +393,7 @@ Panel {
                 }
 
                 Text {
+                  id: captionText
                   width: parent.width
                   text: root.jobCaption(liveRow.modelData)
                     + ((liveRow.modelData.segments && liveRow.modelData.segments.length)
@@ -402,6 +403,14 @@ Panel {
                   opacity: liveRow.modelData.state === "failed" ? 0.9 : 0.45
                   font.family: Style.font.family
                   font.pixelSize: Style.font.caption
+
+                  MouseArea {
+                    anchors.fill: parent
+                    enabled: (liveRow.modelData.segments || []).length > 0
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.toggleExpanded(liveRow.modelData.id)
+                  }
                 }
 
                 // The file drawn as its actual byte ranges: one chunk per
@@ -425,6 +434,7 @@ Panel {
                     model: segRow.segs
 
                     Rectangle {
+                      id: segTrack
                       required property var modelData
                       width: segRow.cell
                       height: segRow.height
@@ -432,9 +442,9 @@ Panel {
                       color: Qt.alpha(Color.foreground, 0.15)
 
                       Rectangle {
-                        width: parent.width * root.segFraction(parent.modelData)
-                        height: parent.height
-                        radius: parent.radius
+                        width: segTrack.width * root.segFraction(segTrack.modelData)
+                        height: segTrack.height
+                        radius: segTrack.radius
                         // A finished chunk is already a full bar; brightening
                         // it would need a theme color this shell does not
                         // define (accent/foreground/urgent are all there is).
@@ -480,17 +490,14 @@ Panel {
                 }
               }
 
+              // Hover only. This sits above the pause/cancel buttons in the
+              // stacking order, so accepting clicks here would swallow theirs;
+              // the disclosure lives on the caption instead.
               MouseArea {
                 id: liveHover
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.LeftButton
-                cursorShape: (liveRow.modelData.segments || []).length
-                             ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: {
-                  if ((liveRow.modelData.segments || []).length)
-                    root.toggleExpanded(liveRow.modelData.id)
-                }
+                acceptedButtons: Qt.NoButton
               }
             }
           }
