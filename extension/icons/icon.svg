@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23262e"/>
+      <stop offset="1" stop-color="#14161b"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7db2ff"/>
+      <stop offset="1" stop-color="#3b7bff"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bg)"/>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="none"
+        stroke="rgba(255,255,255,.10)" stroke-width="2"/>
+
+  <!-- diving falcon: swept wings + body tapering into a downward point -->
+  <g fill="url(#fg)">
+    <path d="M62 34 C48 42 34 45 20 42 C30 57 47 64 59 66 L62 58 Z"/>
+    <path d="M66 34 C80 42 94 45 108 42 C98 57 81 64 69 66 L66 58 Z"/>
+    <path d="M64 30 L73 62 L64 102 L55 62 Z"/>
+  </g>
+
+  <!-- ground line: the landing, echoes a download tray -->
+  <rect x="38" y="106" width="52" height="7" rx="3.5" fill="url(#fg)" opacity=".85"/>
+</svg>
