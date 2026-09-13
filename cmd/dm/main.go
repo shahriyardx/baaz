@@ -288,7 +288,7 @@ func cmdInstallChrome(args []string) error {
 func installExtension() {
 	if os.Geteuid() != 0 {
 		fmt.Println("\nrun with sudo to also auto-install the extension into Chrome:")
-		fmt.Println("  sudo dm install-chrome")
+		fmt.Println("  " + sudoHint())
 		return
 	}
 	src, err := fs.Sub(assets.Extension, "extension")
@@ -335,6 +335,16 @@ func installExtension() {
 	fmt.Println("extension", id, "installs on next Chrome start (confirm the one-time “Enable” prompt)")
 }
 
+// sudoHint prints the sudo re-run command with an absolute path, because
+// sudo's secure_path does not include ~/.local/bin.
+func sudoHint() string {
+	self, err := os.Executable()
+	if err != nil {
+		return "sudo dm install-chrome"
+	}
+	return "sudo " + self + " install-chrome"
+}
+
 // realUserHome resolves the invoking user's home even under sudo, so
 // `sudo dm install-chrome` still writes Chrome files into the right place.
 func realUserHome() (string, error) {
@@ -371,7 +381,7 @@ func installPolicy() {
 	}
 	if len(failed) > 0 {
 		fmt.Println("\nto also disable Chrome's save-location dialog system-wide, run:")
-		fmt.Println(`  sudo dm install-chrome`)
+		fmt.Println("  " + sudoHint())
 		fmt.Println("(or turn off chrome://settings/downloads → “Ask where to save …” by hand)")
 	}
 }
