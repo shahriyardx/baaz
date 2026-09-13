@@ -10,7 +10,7 @@ import (
 
 // Backend is what the socket server needs from the daemon.
 type Backend interface {
-	Add(url, filename string, headers map[string]string) (string, error)
+	Add(url, filename string, headers map[string]string, format string) (string, error)
 	AddBrowser(url, filename string, headers map[string]string, size int64) (string, error)
 	Pause(id string) error
 	Resume(id string) error
@@ -84,7 +84,7 @@ func (s *Server) dispatch(req *Request) Response {
 		snap := s.backend.Snapshot()
 		return Response{OK: true, Snapshot: snap}
 	case "add":
-		id, err := s.backend.Add(req.URL, req.Filename, req.Headers)
+		id, err := s.backend.Add(req.URL, req.Filename, req.Headers, req.Format)
 		if err != nil {
 			return Response{OK: false, Error: err.Error()}
 		}

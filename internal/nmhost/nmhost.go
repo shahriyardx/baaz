@@ -25,6 +25,7 @@ type inMessage struct {
 	UserAgent string `json:"userAgent,omitempty"`
 	ID        string `json:"id,omitempty"`
 	FileSize  int64  `json:"fileSize,omitempty"`
+	Format    string `json:"format,omitempty"`
 }
 
 type outMessage struct {
@@ -83,7 +84,7 @@ func handle(msg *inMessage) outMessage {
 		if msg.UserAgent != "" {
 			headers["User-Agent"] = msg.UserAgent
 		}
-		req = &ipc.Request{Cmd: "add", URL: msg.URL, Filename: msg.Filename, Headers: headers}
+		req = &ipc.Request{Cmd: "add", URL: msg.URL, Filename: msg.Filename, Headers: headers, Format: msg.Format}
 	case "ping":
 		req = &ipc.Request{Cmd: "ping"}
 	case "cancel":

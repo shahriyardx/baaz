@@ -1,12 +1,14 @@
-// baaz video grabber: hover any <video> with a real http(s) source and a
-// small download button appears (IDM-style). blob:/MSE streams (YouTube etc.)
-// get no button — their bytes never exist at a downloadable URL.
+// baaz video grabber: hover any <video> and a download control appears.
+// Direct http(s) sources download in one click; on known media sites
+// (YouTube etc., where the player only has a blob stream) the page URL is
+// sent instead and a quality menu is offered — the daemon runs yt-dlp.
 
 (() => {
-  let btn = null;
+  let wrap = null;
+  let menu = null;
   let currentVideo = null;
   let hideTimer = 0;
-  let pageMode = false; // true: send the page URL (daemon hands it to yt-dlp)
+  let pageMode = false;
 
   // Keep in sync with mediaHosts in internal/downloader/ytdlp.go.
   const MEDIA_HOSTS = [
@@ -14,6 +16,16 @@
     "x.com", "twitter.com", "instagram.com", "facebook.com",
     "dailymotion.com", "soundcloud.com",
   ];
+
+  const QUALITIES = [
+    { key: "best", label: "Best quality" },
+    { key: "1080", label: "1080p" },
+    { key: "720", label: "720p" },
+    { key: "480", label: "480p" },
+    { key: "audio", label: "Audio only · mp3" },
+  ];
+
+  const ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>`;
 
   function isMediaPage() {
     const h = location.hostname.replace(/^www\./, "");
@@ -38,75 +50,161 @@
     return title + ".mp4";
   }
 
-  function ensureButton() {
-    if (btn) return btn;
-    btn = document.createElement("div");
-    btn.textContent = "⬇ baaz";
-    Object.assign(btn.style, {
+  function ensureUI() {
+    if (wrap) return;
+    wrap = document.createElement("div");
+    Object.assign(wrap.style, {
       position: "fixed",
       zIndex: "2147483647",
-      padding: "4px 10px",
-      background: "rgba(20,20,20,.85)",
+      display: "none",
+      fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+      WebkitFontSmoothing: "antialiased",
+    });
+    wrap.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+    wrap.addEventListener("mouseleave", scheduleHide);
+
+    const btn = document.createElement("div");
+    btn.id = "baaz-btn";
+    btn.innerHTML = ICON + "<span style='margin-left:6px'>Download</span>";
+    Object.assign(btn.style, {
+      display: "flex",
+      alignItems: "center",
+      padding: "7px 14px",
+      background: "rgba(17, 20, 26, .78)",
+      backdropFilter: "blur(10px)",
       color: "#fff",
-      font: "12px system-ui, sans-serif",
-      borderRadius: "14px",
+      fontSize: "12.5px",
+      fontWeight: "600",
+      letterSpacing: ".2px",
+      borderRadius: "10px",
+      border: "1px solid rgba(255,255,255,.14)",
+      boxShadow: "0 4px 14px rgba(0,0,0,.35)",
       cursor: "pointer",
       userSelect: "none",
-      display: "none",
-      boxShadow: "0 1px 4px rgba(0,0,0,.4)",
+      transition: "background .12s, transform .12s",
     });
-    btn.addEventListener("mouseenter", () => clearTimeout(hideTimer));
-    btn.addEventListener("mouseleave", scheduleHide);
+    btn.addEventListener("mouseenter", () => { btn.style.background = "rgba(35, 40, 50, .92)"; });
+    btn.addEventListener("mouseleave", () => { btn.style.background = "rgba(17, 20, 26, .78)"; });
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
-      if (!currentVideo) return;
-      const url = pageMode ? location.href : videoURL(currentVideo);
-      if (!url) return;
-      btn.textContent = "…";
-      chrome.runtime.sendMessage(
-        { type: "baaz-grab", url, filename: pageMode ? "" : filenameFor(url), referrer: location.href },
-        (reply) => {
-          btn.textContent = reply && reply.ok ? "✓ baaz" : "✗ baaz";
-          setTimeout(() => { if (btn) btn.textContent = "⬇ baaz"; }, 2000);
-        }
-      );
+      if (pageMode) toggleMenu();
+      else grab("");
     });
-    document.documentElement.appendChild(btn);
-    return btn;
+    wrap.appendChild(btn);
+
+    menu = document.createElement("div");
+    Object.assign(menu.style, {
+      display: "none",
+      marginTop: "6px",
+      minWidth: "170px",
+      background: "rgba(17, 20, 26, .92)",
+      backdropFilter: "blur(12px)",
+      border: "1px solid rgba(255,255,255,.14)",
+      borderRadius: "12px",
+      boxShadow: "0 8px 24px rgba(0,0,0,.45)",
+      overflow: "hidden",
+      padding: "5px",
+    });
+    for (const q of QUALITIES) {
+      const item = document.createElement("div");
+      item.textContent = q.label;
+      Object.assign(item.style, {
+        padding: "8px 12px",
+        color: "#e8eaed",
+        fontSize: "12.5px",
+        borderRadius: "8px",
+        cursor: "pointer",
+      });
+      item.addEventListener("mouseenter", () => { item.style.background = "rgba(79,140,255,.22)"; });
+      item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        menu.style.display = "none";
+        grab(q.key);
+      });
+      menu.appendChild(item);
+    }
+    wrap.appendChild(menu);
+    document.documentElement.appendChild(wrap);
+  }
+
+  function toggleMenu() {
+    menu.style.display = menu.style.display === "none" ? "block" : "none";
+  }
+
+  function setLabel(html) {
+    const btn = wrap.querySelector("#baaz-btn");
+    if (btn) btn.innerHTML = html;
+  }
+
+  function grab(format) {
+    if (!currentVideo) return;
+    const url = pageMode ? location.href : videoURL(currentVideo);
+    if (!url) return;
+    setLabel(ICON + "<span style='margin-left:6px'>Sending…</span>");
+    chrome.runtime.sendMessage(
+      {
+        type: "baaz-grab",
+        url,
+        format,
+        filename: pageMode ? "" : filenameFor(url),
+        referrer: location.href,
+      },
+      (reply) => {
+        const ok = reply && reply.ok;
+        setLabel(ICON + `<span style='margin-left:6px'>${ok ? "Added ✓" : "Failed ✗"}</span>`);
+        setTimeout(() => setLabel(ICON + "<span style='margin-left:6px'>Download</span>"), 2200);
+      }
+    );
   }
 
   function showFor(v) {
     const url = videoURL(v);
-    // blob:/MSE stream: no direct URL, but on known media sites the page
-    // URL itself is downloadable via yt-dlp on the daemon side.
     pageMode = !url;
     if (!url && !isMediaPage()) return;
-    currentVideo = v;
-    const b = ensureButton();
     const r = v.getBoundingClientRect();
-    if (r.width < 120 || r.height < 60) return; // skip thumbnail-sized players
-    b.style.left = Math.max(4, r.right - 84) + "px";
-    b.style.top = Math.max(4, r.top + 8) + "px";
-    b.style.display = "block";
+    if (r.width < 160 || r.height < 90) return; // skip thumbnails
+    currentVideo = v;
+    ensureUI();
+    wrap.style.left = Math.max(6, r.right - 130) + "px";
+    wrap.style.top = Math.max(6, r.top + 10) + "px";
+    wrap.style.display = "block";
+  }
+
+  function hideUI() {
+    if (!wrap) return;
+    wrap.style.display = "none";
+    menu.style.display = "none";
   }
 
   function scheduleHide() {
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => { if (btn) btn.style.display = "none"; }, 400);
+    hideTimer = setTimeout(hideUI, 450);
   }
 
-  document.addEventListener("mouseover", (e) => {
-    const v = e.target instanceof HTMLVideoElement
-      ? e.target
-      : (e.target instanceof Element ? e.target.closest("video") : null);
+  // Players (Facebook, YouTube) stack invisible overlays above the <video>,
+  // so hover targets are never the video itself. elementsFromPoint pierces
+  // the whole stack under the cursor.
+  let lastCheck = 0;
+  document.addEventListener("mousemove", (e) => {
+    const now = Date.now();
+    if (now - lastCheck < 150) return;
+    lastCheck = now;
+    if (wrap && e.target instanceof Node && wrap.contains(e.target)) {
+      clearTimeout(hideTimer);
+      return;
+    }
+    const stack = document.elementsFromPoint(e.clientX, e.clientY);
+    const v = stack.find((el) => el instanceof HTMLVideoElement);
     if (v) {
       clearTimeout(hideTimer);
       showFor(v);
-    } else if (btn && e.target !== btn) {
+    } else if (wrap && wrap.style.display !== "none") {
       scheduleHide();
     }
   }, true);
 
-  window.addEventListener("scroll", () => { if (btn) btn.style.display = "none"; }, true);
+  window.addEventListener("scroll", hideUI, true);
 })();

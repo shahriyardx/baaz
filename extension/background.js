@@ -117,6 +117,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         type: "grab",
         url: msg.url,
         filename: msg.filename || "",
+        format: msg.format || "",
         cookies: await cookieHeaderFor(msg.url),
         referrer: msg.referrer || "",
         userAgent: navigator.userAgent,

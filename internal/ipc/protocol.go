@@ -10,6 +10,7 @@ type Request struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	ID       string            `json:"id,omitempty"`
 	Size     int64             `json:"size,omitempty"`     // advertised size, for min-size policy
+	Format   string            `json:"format,omitempty"`   // media quality preset: best|1080|720|480|audio
 	Settings map[string]string `json:"settings,omitempty"` // setconfig: key -> value
 }
 

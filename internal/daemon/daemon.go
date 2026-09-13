@@ -132,10 +132,10 @@ func (m *Manager) AddBrowser(url, filename string, headers map[string]string, si
 	if size > 0 && size < minBytes {
 		return "", fmt.Errorf("%sbelow min size", ipc.ErrRejected)
 	}
-	return m.Add(url, filename, headers)
+	return m.Add(url, filename, headers, "")
 }
 
-func (m *Manager) Add(url, filename string, headers map[string]string) (string, error) {
+func (m *Manager) Add(url, filename string, headers map[string]string, format string) (string, error) {
 	if url == "" {
 		return "", fmt.Errorf("missing url")
 	}
@@ -151,6 +151,7 @@ func (m *Manager) Add(url, filename string, headers map[string]string) (string, 
 	}
 	if downloader.IsMediaURL(url) {
 		j.Kind = downloader.KindMedia
+		j.Format = format
 	}
 	m.mu.Lock()
 	m.jobs[j.ID] = j

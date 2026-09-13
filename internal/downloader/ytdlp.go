@@ -44,6 +44,7 @@ var (
 	ytProgressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)% of ~?\s*([\d.]+)([KMGT])iB`)
 	ytDestRe     = regexp.MustCompile(`\[download\] Destination: (.+)$`)
 	ytMergeRe    = regexp.MustCompile(`\[Merger\] Merging formats into "(.+)"`)
+	ytExtractRe  = regexp.MustCompile(`\[ExtractAudio\] Destination: (.+)$`)
 )
 
 // runYtdlp delegates a media-page URL to yt-dlp, translating its progress
@@ -63,7 +64,10 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	j.mu.Unlock()
 
 	outTmpl := filepath.Join(j.Dir, "%(title)s [%(id)s].%(ext)s")
-	cmd := exec.CommandContext(ctx, "yt-dlp", "--newline", "--no-playlist", "-c", "-o", outTmpl, j.URL)
+	args := []string{"--newline", "--no-playlist", "-c", "-o", outTmpl}
+	args = append(args, formatArgs(j.Format)...)
+	args = append(args, j.URL)
+	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
 	cmd.Stderr = os.Stderr // ends up in the daemon log
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -109,6 +113,12 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 			j.Filename = filepath.Base(lastPath)
 			j.mu.Unlock()
 		}
+		if m := ytExtractRe.FindStringSubmatch(line); m != nil {
+			lastPath = strings.TrimSpace(m[1])
+			j.mu.Lock()
+			j.Filename = filepath.Base(lastPath)
+			j.mu.Unlock()
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -126,6 +136,19 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	}
 	j.mu.Unlock()
 	return nil
+}
+
+// formatArgs maps a quality preset to yt-dlp selector flags.
+func formatArgs(preset string) []string {
+	switch preset {
+	case "1080", "720", "480":
+		sel := fmt.Sprintf("bv*[height<=%s]+ba/b[height<=%s]", preset, preset)
+		return []string{"-f", sel}
+	case "audio":
+		return []string{"-f", "bestaudio", "-x", "--audio-format", "mp3"}
+	default: // "", "best"
+		return nil
+	}
 }
 
 func sizeUnit(s string) int64 {

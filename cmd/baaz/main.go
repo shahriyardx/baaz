@@ -143,16 +143,17 @@ func dial() (*ipc.Client, error) {
 func cmdAdd(args []string) error {
 	fs := flag.NewFlagSet("add", flag.ExitOnError)
 	out := fs.String("out", "", "output filename")
+	format := fs.String("format", "", "media quality: best|1080|720|480|audio")
 	fs.Parse(args)
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: baaz add URL [--out NAME]")
+		return fmt.Errorf("usage: baaz add URL [--out NAME] [--format QUALITY]")
 	}
 	c, err := dial()
 	if err != nil {
 		return err
 	}
 	defer c.Close()
-	resp, err := c.Do(&ipc.Request{Cmd: "add", URL: fs.Arg(0), Filename: *out})
+	resp, err := c.Do(&ipc.Request{Cmd: "add", URL: fs.Arg(0), Filename: *out, Format: *format})
 	if err != nil {
 		return err
 	}

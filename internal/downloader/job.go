@@ -52,6 +52,7 @@ type Job struct {
 	FinalPath   string            `json:"finalPath,omitempty"`
 	NoRange     bool              `json:"noRange,omitempty"` // single-stream job (no usable Range support)
 	Kind        string            `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp
+	Format      string            `json:"format,omitempty"`  // media preset: best|1080|720|480|audio
 
 	mu        sync.Mutex
 	cancel    context.CancelFunc
