@@ -12,7 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
+
+// rateSettle is how long the speed limit must hold steady before a running
+// yt-dlp is restarted to pick it up.
+const rateSettle = 600 * time.Millisecond
 
 const (
 	KindHTTP  = ""      // plain segmented/stream download (zero value: older state files)
@@ -153,26 +158,109 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	}
 	// temp path keeps .part/.ytdl clutter out of the visible folder; the
 	// finished file lands in the home path.
-	args := []string{"--newline", "--no-playlist", "-c"}
+	baseArgs := []string{"--newline", "--no-playlist", "-c",
+		"-P", "home:" + outDir, "-P", "temp:" + tmpDir,
+		"-o", "%(title).120B [%(id)s].%(ext)s"}
+	baseArgs = append(baseArgs, formatArgs(j.Format)...)
+	baseArgs = append(baseArgs, j.URL)
+
 	// yt-dlp does its own transfers, so the token bucket never sees them;
-	// hand it the same cap instead.
-	if kb := e.Limiter.Rate() >> 10; kb > 0 {
-		args = append(args, "--limit-rate", fmt.Sprintf("%dK", kb))
+	// hand it the same cap instead. It reads --limit-rate once at startup,
+	// though, so a cap changed mid-download cannot be pushed into the
+	// running child the way plain HTTP picks it up on the next chunk. Rerun
+	// it instead: `-c` resumes from the .part file, which is exactly what a
+	// manual pause/resume did, only without the user having to do it.
+	var lastPath string
+	for {
+		// Subscribe before reading the rate. The other order has a window
+		// where a change lands in between and is then waited on through the
+		// already-replaced channel, so it would never arrive.
+		rateChanged := e.Limiter.Changed()
+		rate := e.Limiter.Rate()
+		args := baseArgs
+		if kb := rate >> 10; kb > 0 {
+			args = append([]string{"--limit-rate", fmt.Sprintf("%dK", kb)}, baseArgs...)
+		}
+		path, rerun, err := e.ytdlpAttempt(ctx, j, seg, bin, args, rate, rateChanged)
+		if path != "" {
+			lastPath = path
+		}
+		if rerun {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		break
 	}
-	args = append(args,
-		"-P", "home:"+outDir, "-P", "temp:"+tmpDir,
-		"-o", "%(title).120B [%(id)s].%(ext)s")
-	args = append(args, formatArgs(j.Format)...)
-	args = append(args, j.URL)
-	cmd := exec.CommandContext(ctx, bin, args...)
+
+	j.mu.Lock()
+	if j.Total > 0 {
+		atomic.StoreInt64(&seg.Written, j.Total)
+	}
+	if lastPath != "" {
+		// Never leave FinalPath pointing into the hidden temp dir: if the
+		// announced path lives there, the finished file is its basename in
+		// the real output dir.
+		if strings.HasPrefix(lastPath, tmpDir) {
+			if moved := filepath.Join(outDir, filepath.Base(lastPath)); fileExists(moved) {
+				lastPath = moved
+			}
+		}
+		j.FinalPath = lastPath
+	}
+	j.mu.Unlock()
+	return nil
+}
+
+// ytdlpAttempt runs yt-dlp once. It reports the last path yt-dlp announced,
+// and whether it was stopped because the speed limit changed — in which case
+// the caller runs it again with the new cap rather than treating the
+// cancellation as a pause.
+func (e *Engine) ytdlpAttempt(ctx context.Context, j *Job, seg *Segment, bin string, args []string, launchRate int64, rateChanged <-chan struct{}) (string, bool, error) {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Once the transfer is done and ffmpeg is merging, restarting would only
+	// discard that work, and the cap has nothing left to apply to.
+	var merging atomic.Bool
+	var rerun atomic.Bool
+	watchDone := make(chan struct{})
+	defer close(watchDone)
+
+	go func() {
+		select {
+		case <-rateChanged:
+		case <-watchDone:
+			return
+		}
+		// A stepper held down emits a change per click. Wait for the value
+		// to settle so a run of clicks costs one restart, not eight.
+		for {
+			select {
+			case <-e.Limiter.Changed():
+			case <-watchDone:
+				return
+			case <-time.After(rateSettle):
+				if e.Limiter.Rate() == launchRate || merging.Load() {
+					return // back where it started, or too late to matter
+				}
+				rerun.Store(true)
+				cancel()
+				return
+			}
+		}
+	}()
+
+	cmd := exec.CommandContext(runCtx, bin, args...)
 	cmd.Env = e.ytdlpEnv()
 	cmd.Stderr = os.Stderr // ends up in the daemon log
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return "", false, err
 	}
 	if err := cmd.Start(); err != nil {
-		return err
+		return "", false, err
 	}
 
 	var lastPath string
@@ -206,12 +294,14 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 			j.mu.Unlock()
 		}
 		if m := ytMergeRe.FindStringSubmatch(line); m != nil {
+			merging.Store(true)
 			lastPath = strings.TrimSpace(m[1])
 			j.mu.Lock()
 			j.Filename = filepath.Base(lastPath)
 			j.mu.Unlock()
 		}
 		if m := ytExtractRe.FindStringSubmatch(line); m != nil {
+			merging.Store(true)
 			lastPath = strings.TrimSpace(m[1])
 			j.mu.Lock()
 			j.Filename = filepath.Base(lastPath)
@@ -232,28 +322,15 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	}
 
 	if err := cmd.Wait(); err != nil {
+		if rerun.Load() {
+			return lastPath, true, nil // our own cancel: rerun with the new cap
+		}
 		if ctx.Err() != nil {
-			return ctx.Err() // paused/canceled; `-c` resumes on next run
+			return lastPath, false, ctx.Err() // paused/canceled; `-c` resumes
 		}
-		return fmt.Errorf("yt-dlp failed: %v (see daemon.log)", err)
+		return lastPath, false, fmt.Errorf("yt-dlp failed: %v (see daemon.log)", err)
 	}
-	j.mu.Lock()
-	if j.Total > 0 {
-		atomic.StoreInt64(&seg.Written, j.Total)
-	}
-	if lastPath != "" {
-		// Never leave FinalPath pointing into the hidden temp dir: if the
-		// announced path lives there, the finished file is its basename in
-		// the real output dir.
-		if strings.HasPrefix(lastPath, tmpDir) {
-			if moved := filepath.Join(outDir, filepath.Base(lastPath)); fileExists(moved) {
-				lastPath = moved
-			}
-		}
-		j.FinalPath = lastPath
-	}
-	j.mu.Unlock()
-	return nil
+	return lastPath, false, nil
 }
 
 func fileExists(p string) bool {

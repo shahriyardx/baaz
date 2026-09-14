@@ -19,12 +19,16 @@ type Limiter struct {
 	tokens   float64
 	last     time.Time
 	disabled bool
+	// changed is closed and replaced whenever the rate actually changes, so
+	// transfers that cannot be re-throttled in place (yt-dlp takes its cap
+	// as a command-line flag) can notice and restart themselves.
+	changed chan struct{}
 }
 
 // NewLimiter returns a limiter capped at bytesPerSec. Zero or less means no
 // limit, and Wait becomes a cheap no-op.
 func NewLimiter(bytesPerSec int64) *Limiter {
-	l := &Limiter{}
+	l := &Limiter{changed: make(chan struct{})}
 	l.SetRate(bytesPerSec)
 	return l
 }
@@ -34,7 +38,19 @@ func NewLimiter(bytesPerSec int64) *Limiter {
 func (l *Limiter) SetRate(bytesPerSec int64) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if bytesPerSec <= 0 {
+	if bytesPerSec < 0 {
+		bytesPerSec = 0
+	}
+	prev := l.rate
+	if l.disabled {
+		prev = 0
+	}
+	defer func() {
+		if prev != bytesPerSec {
+			l.notifyLocked()
+		}
+	}()
+	if bytesPerSec == 0 {
 		l.disabled = true
 		l.rate = 0
 		return
@@ -50,6 +66,25 @@ func (l *Limiter) SetRate(bytesPerSec int64) {
 	if l.last.IsZero() {
 		l.last = time.Now()
 	}
+}
+
+// Changed returns a channel that closes the next time the rate changes.
+// Callers re-fetch it after each change; the returned channel is never
+// reused.
+func (l *Limiter) Changed() <-chan struct{} {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.changed == nil {
+		l.changed = make(chan struct{})
+	}
+	return l.changed
+}
+
+func (l *Limiter) notifyLocked() {
+	if l.changed != nil {
+		close(l.changed)
+	}
+	l.changed = make(chan struct{})
 }
 
 func (l *Limiter) Rate() int64 {

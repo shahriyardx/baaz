@@ -146,11 +146,45 @@ func dial() (*ipc.Client, error) {
 	return ipc.Dial(config.SocketPath(), config.LogPath(), true)
 }
 
+// reorderFlags moves flags ahead of positional arguments. Go's flag package
+// stops parsing at the first non-flag word, so the documented form
+// `baaz add URL --out NAME` left --out sitting in the positional list and
+// failed with a usage error.
+func reorderFlags(fs *flag.FlagSet, args []string) []string {
+	var flags, pos []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--" {
+			pos = append(pos, args[i+1:]...)
+			break
+		}
+		if len(a) > 1 && a[0] == '-' {
+			flags = append(flags, a)
+			// A flag that takes a value also owns the word after it, unless
+			// it was given as --flag=value.
+			if !strings.Contains(a, "=") && i+1 < len(args) {
+				if f := fs.Lookup(strings.TrimLeft(a, "-")); f != nil && !isBoolFlag(f) {
+					i++
+					flags = append(flags, args[i])
+				}
+			}
+			continue
+		}
+		pos = append(pos, a)
+	}
+	return append(flags, pos...)
+}
+
+func isBoolFlag(f *flag.Flag) bool {
+	b, ok := f.Value.(interface{ IsBoolFlag() bool })
+	return ok && b.IsBoolFlag()
+}
+
 func cmdAdd(args []string) error {
 	fs := flag.NewFlagSet("add", flag.ExitOnError)
 	out := fs.String("out", "", "output filename")
 	format := fs.String("format", "", "media quality: best|2160|1440|1080|720|480|audio")
-	fs.Parse(args)
+	fs.Parse(reorderFlags(fs, args))
 	if fs.NArg() != 1 {
 		return fmt.Errorf("usage: baaz add URL [--out NAME] [--format QUALITY]")
 	}
