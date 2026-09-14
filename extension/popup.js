@@ -1,34 +1,55 @@
 const DEFAULTS = { enabled: true };
 
-const enabledEl = document.getElementById("enabled");
-const dotEl = document.getElementById("dot");
-const statusEl = document.getElementById("status");
-const activeEl = document.getElementById("active");
-const modeEl = document.getElementById("mode");
-const versionEl = document.getElementById("version");
+const els = {
+  enabled: document.getElementById("enabled"),
+  dot: document.getElementById("dot"),
+  status: document.getElementById("statusText"),
+  live: document.getElementById("live"),
+  count: document.getElementById("activeCount"),
+  cardSub: document.getElementById("cardSub"),
+  version: document.getElementById("version"),
+};
 
-versionEl.textContent = "v" + chrome.runtime.getManifest().version;
+els.version.textContent = "v" + chrome.runtime.getManifest().version;
 
 chrome.storage.local.get(DEFAULTS).then((s) => {
-  enabledEl.checked = s.enabled;
+  els.enabled.checked = s.enabled;
+  reflectSwitch(s.enabled);
 });
 
-enabledEl.addEventListener("change", () =>
-  chrome.storage.local.set({ enabled: enabledEl.checked }));
+els.enabled.addEventListener("change", () => {
+  chrome.storage.local.set({ enabled: els.enabled.checked });
+  reflectSwitch(els.enabled.checked);
+});
+
+function reflectSwitch(on) {
+  els.cardSub.textContent = on
+    ? "Chrome hands files to baaz"
+    : "Chrome downloads normally";
+}
+
+function setStatus(kind, text) {
+  els.dot.className = "dot" + (kind ? " " + kind : "");
+  els.status.textContent = text;
+}
 
 chrome.runtime.sendNativeMessage("com.shahriyar.baaz", { type: "ping" }, (reply) => {
   if (chrome.runtime.lastError || !reply || !reply.ok) {
-    dotEl.className = "dot down";
-    statusEl.textContent = "daemon offline";
-    activeEl.textContent = "–";
-    modeEl.textContent = "–";
+    setStatus("down", "app not running");
     return;
   }
   const n = reply.active || 0;
-  activeEl.textContent = String(n);
-  modeEl.textContent = reply.intercept === false ? "off" : "on";
-  modeEl.style.color = reply.intercept === false ? "var(--bad)" : "var(--ok)";
-  dotEl.className = "dot up";
-  statusEl.textContent = n ? "downloading" : "idle";
+  // The header reports the connection, the banner reports activity. Saying
+  // "downloading" in both just repeats itself.
+  if (reply.intercept === false) {
+    // The app's own switch is off, which outranks the extension's.
+    setStatus("", "paused in app");
+  } else {
+    setStatus(n ? "busy" : "up", "connected");
+  }
+  if (n > 0) {
+    els.count.textContent = String(n);
+    els.live.classList.add("show");
+  }
   chrome.action.setBadgeText({ text: "" });
 });

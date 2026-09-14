@@ -91,25 +91,43 @@
     const btn = document.createElement("div");
     btn.id = "baaz-btn";
     btn.innerHTML = ICON + "<span style='margin-left:6px'>Download</span>";
+    // Sits on top of someone else's video, so it stays small and dark and
+    // gets out of the way: no shadow bloom, a hairline border, and a lift on
+    // hover rather than a colour change shouting for attention.
+    const REST = "rgba(12, 14, 18, .72)";
+    const HOVER = "rgba(22, 26, 33, .92)";
     Object.assign(btn.style, {
       display: "flex",
       alignItems: "center",
-      padding: "7px 14px",
-      background: "rgba(17, 20, 26, .78)",
-      backdropFilter: "blur(10px)",
+      gap: "6px",
+      padding: "6px 11px",
+      background: REST,
+      backdropFilter: "blur(14px) saturate(140%)",
+      WebkitBackdropFilter: "blur(14px) saturate(140%)",
       color: "#fff",
-      fontSize: "12.5px",
-      fontWeight: "600",
-      letterSpacing: ".2px",
-      borderRadius: "10px",
-      border: "1px solid rgba(255,255,255,.14)",
-      boxShadow: "0 4px 14px rgba(0,0,0,.35)",
+      fontSize: "12px",
+      fontWeight: "560",
+      letterSpacing: "-.01em",
+      lineHeight: "1",
+      borderRadius: "8px",
+      border: "1px solid rgba(255,255,255,.12)",
+      boxShadow: "0 2px 8px rgba(0,0,0,.28)",
       cursor: "pointer",
       userSelect: "none",
-      transition: "background .12s",
+      transition: "background .14s ease, transform .14s ease, box-shadow .14s ease",
     });
-    btn.addEventListener("mouseenter", () => { btn.style.background = "rgba(35, 40, 50, .92)"; });
-    btn.addEventListener("mouseleave", () => { btn.style.background = "rgba(17, 20, 26, .78)"; });
+    btn.addEventListener("mouseenter", () => {
+      btn.style.background = HOVER;
+      btn.style.transform = "translateY(-1px)";
+      btn.style.boxShadow = "0 4px 14px rgba(0,0,0,.34)";
+    });
+    btn.addEventListener("mouseleave", () => {
+      btn.style.background = REST;
+      btn.style.transform = "none";
+      btn.style.boxShadow = "0 2px 8px rgba(0,0,0,.28)";
+    });
+    btn.addEventListener("mousedown", () => { btn.style.transform = "translateY(0) scale(.97)"; });
+    btn.addEventListener("mouseup", () => { btn.style.transform = "translateY(-1px)"; });
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -126,27 +144,39 @@
       position: "absolute",
       right: "0",
       top: "calc(100% + 6px)",
-      minWidth: "170px",
-      background: "rgba(17, 20, 26, .92)",
-      backdropFilter: "blur(12px)",
-      border: "1px solid rgba(255,255,255,.14)",
-      borderRadius: "12px",
-      boxShadow: "0 8px 24px rgba(0,0,0,.45)",
+      minWidth: "164px",
+      background: "rgba(14, 17, 22, .94)",
+      backdropFilter: "blur(20px) saturate(140%)",
+      WebkitBackdropFilter: "blur(20px) saturate(140%)",
+      border: "1px solid rgba(255,255,255,.1)",
+      borderRadius: "10px",
+      boxShadow: "0 10px 30px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.05) inset",
       overflow: "hidden",
-      padding: "5px",
+      padding: "4px",
     });
     for (const q of QUALITIES) {
       const item = document.createElement("div");
       item.textContent = q.label;
       Object.assign(item.style, {
-        padding: "8px 12px",
-        color: "#e8eaed",
-        fontSize: "12.5px",
-        borderRadius: "8px",
+        display: "flex",
+        alignItems: "center",
+        padding: "7px 10px",
+        color: "rgba(255,255,255,.88)",
+        fontSize: "12px",
+        fontWeight: "500",
+        letterSpacing: "-.01em",
+        borderRadius: "6px",
         cursor: "pointer",
+        transition: "background .1s ease, color .1s ease",
       });
-      item.addEventListener("mouseenter", () => { item.style.background = "rgba(79,140,255,.22)"; });
-      item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
+      item.addEventListener("mouseenter", () => {
+        item.style.background = "rgba(79,140,255,.9)";
+        item.style.color = "#fff";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.background = "transparent";
+        item.style.color = "rgba(255,255,255,.88)";
+      });
       item.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
