@@ -29,13 +29,13 @@ type inMessage struct {
 }
 
 type outMessage struct {
-	OK        bool   `json:"ok"`
-	Heights   []int  `json:"heights,omitempty"` // for "formats"
-	Error     string `json:"error,omitempty"`
-	Rejected  bool   `json:"rejected,omitempty"` // policy skip, not a failure
-	ID        string `json:"id,omitempty"`
-	Active    int    `json:"active,omitempty"`
-	Intercept bool   `json:"intercept"`
+	OK        bool              `json:"ok"`
+	Qualities []ipc.QualityInfo `json:"qualities,omitempty"` // for "formats"
+	Error     string            `json:"error,omitempty"`
+	Rejected  bool              `json:"rejected,omitempty"` // policy skip, not a failure
+	ID        string            `json:"id,omitempty"`
+	Active    int               `json:"active,omitempty"`
+	Intercept bool              `json:"intercept"`
 }
 
 // Run services one Chrome connection until stdin EOF.
@@ -100,7 +100,7 @@ func handle(msg *inMessage) outMessage {
 	if err != nil {
 		return outMessage{OK: false, Error: err.Error()}
 	}
-	out := outMessage{OK: resp.OK, Error: resp.Error, ID: resp.ID, Heights: resp.Heights}
+	out := outMessage{OK: resp.OK, Error: resp.Error, ID: resp.ID, Qualities: resp.Qualities}
 	if strings.HasPrefix(resp.Error, ipc.ErrRejected) {
 		out.Rejected = true
 	}

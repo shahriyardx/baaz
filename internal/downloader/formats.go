@@ -7,15 +7,47 @@ import (
 	"io"
 	"os/exec"
 	"sort"
+	"strings"
 )
 
-// AvailableHeights reports the video resolutions a media URL actually offers,
-// tallest first.
+// Quality is one resolution a media URL offers.
+type Quality struct {
+	// Height and Width as reported. Label is the number people recognise:
+	// the smaller side, so a 1080x1920 portrait video reads 1080p rather
+	// than 1920p.
+	Height int    `json:"height"`
+	Width  int    `json:"width"`
+	Label  int    `json:"label"`
+	Codec  string `json:"codec"` // h264, vp9, av1, or other
+}
+
+// codecFamily reduces yt-dlp's precise codec strings to what matters: H.264
+// plays in everything, the rest may not.
+func codecFamily(vcodec string) string {
+	switch {
+	case vcodec == "" || vcodec == "none":
+		return ""
+	case strings.HasPrefix(vcodec, "avc") || strings.HasPrefix(vcodec, "h264"):
+		return "h264"
+	case strings.HasPrefix(vcodec, "vp9") || strings.HasPrefix(vcodec, "vp09"):
+		return "vp9"
+	case strings.HasPrefix(vcodec, "av01") || strings.HasPrefix(vcodec, "av1"):
+		return "av1"
+	default:
+		return "other"
+	}
+}
+
+// AvailableQualities reports the resolutions a media URL actually offers,
+// largest first, with the best codec available at each.
 //
-// Offering 4K on a 720p video is noise, and worse, it implies a download that
+// Offering 4K on a 720p video is noise, and worse, implies a download that
 // will silently come back smaller than asked for. yt-dlp already knows the
-// answer; this asks it.
-func (e *Engine) AvailableHeights(ctx context.Context, url string) ([]int, error) {
+// answer; this asks it. The codec comes along because whether a file plays
+// is a property of the codec, not the resolution — saying "needs VLC" for
+// everything above 1080p is a guess that happens to fit YouTube and not
+// much else.
+func (e *Engine) AvailableQualities(ctx context.Context, url string) ([]Quality, error) {
 	if err := e.ensureMediaTools(ctx, func(string) {}); err != nil {
 		return nil, err
 	}
@@ -24,7 +56,7 @@ func (e *Engine) AvailableHeights(ctx context.Context, url string) ([]int, error
 		return nil, err
 	}
 
-	// -J is one extraction pass and no download. --flat-playlist keeps a
+	// -J is one extraction pass and no download. --no-playlist keeps a
 	// playlist URL from expanding into every entry.
 	cmd := exec.CommandContext(ctx, bin,
 		"-J", "--no-warnings", "--no-playlist", "--skip-download", url)
@@ -50,6 +82,7 @@ func (e *Engine) AvailableHeights(ctx context.Context, url string) ([]int, error
 	var info struct {
 		Formats []struct {
 			Height int    `json:"height"`
+			Width  int    `json:"width"`
 			VCodec string `json:"vcodec"`
 		} `json:"formats"`
 	}
@@ -57,18 +90,30 @@ func (e *Engine) AvailableHeights(ctx context.Context, url string) ([]int, error
 		return nil, fmt.Errorf("unexpected yt-dlp output: %w", err)
 	}
 
-	seen := map[int]bool{}
-	var heights []int
+	byHeight := map[int]Quality{}
 	for _, f := range info.Formats {
-		// "none" marks an audio-only stream, which has no resolution to offer.
-		if f.Height <= 0 || f.VCodec == "none" {
+		family := codecFamily(f.VCodec)
+		// An audio-only stream has no resolution to offer.
+		if f.Height <= 0 || family == "" {
 			continue
 		}
-		if !seen[f.Height] {
-			seen[f.Height] = true
-			heights = append(heights, f.Height)
+		label := f.Height
+		if f.Width > 0 && f.Width < f.Height {
+			label = f.Width // portrait: the smaller side is the one quoted
 		}
+		q := Quality{Height: f.Height, Width: f.Width, Label: label, Codec: family}
+		// Keep H.264 when the same resolution offers several codecs, since
+		// that is the one that plays everywhere.
+		if existing, ok := byHeight[f.Height]; ok && existing.Codec == "h264" {
+			continue
+		}
+		byHeight[f.Height] = q
 	}
-	sort.Sort(sort.Reverse(sort.IntSlice(heights)))
-	return heights, nil
+
+	qualities := make([]Quality, 0, len(byHeight))
+	for _, q := range byHeight {
+		qualities = append(qualities, q)
+	}
+	sort.Slice(qualities, func(a, b int) bool { return qualities[a].Height > qualities[b].Height })
+	return qualities, nil
 }

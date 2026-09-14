@@ -9,7 +9,7 @@ import (
 
 // Reads a real video's resolutions, because the whole point is that the list
 // reflects what a given video actually has rather than a fixed menu.
-func TestAvailableHeightsReadsRealVideos(t *testing.T) {
+func TestAvailableQualitiesReadsRealVideos(t *testing.T) {
 	if testing.Short() {
 		t.Skip("network test")
 	}
@@ -24,14 +24,24 @@ func TestAvailableHeightsReadsRealVideos(t *testing.T) {
 		"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 	} {
 		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-		heights, err := e.AvailableHeights(ctx, url)
+		qualities, err := e.AvailableQualities(ctx, url)
 		cancel()
 		if err != nil {
 			t.Skipf("%v", err) // offline, or yt-dlp unavailable
 		}
-		if len(heights) == 0 {
+		if len(qualities) == 0 {
 			t.Errorf("%s: no resolutions found", url)
 			continue
+		}
+		heights := make([]int, len(qualities))
+		for i, q := range qualities {
+			heights[i] = q.Height
+			if q.Label > q.Height {
+				t.Errorf("%s: label %d exceeds height %d", url, q.Label, q.Height)
+			}
+			if q.Codec == "" {
+				t.Errorf("%s: %dp has no codec", url, q.Label)
+			}
 		}
 		for i, h := range heights {
 			// Storyboard entries come back as tiny heights; they are not

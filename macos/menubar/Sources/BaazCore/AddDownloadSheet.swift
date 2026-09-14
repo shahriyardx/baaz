@@ -46,8 +46,8 @@ public struct AddDownloadSheet: View {
                     Text("Quality").font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $format) {
                         Text("Best — plays anywhere").tag("best")
-                        Text("4K — needs VLC").tag("2160")
-                        Text("1440p — needs VLC").tag("1440")
+                        Text("2160p — VP9 or AV1").tag("2160")
+                        Text("1440p — VP9 or AV1").tag("1440")
                         Text("1080p").tag("1080")
                         Text("720p").tag("720")
                         Text("480p").tag("480")
@@ -55,7 +55,7 @@ public struct AddDownloadSheet: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
-                    Text("Above 1080p YouTube offers only VP9 and AV1, which QuickTime cannot play. Anything up to 1080p is H.264 and opens anywhere.")
+                    Text("Up to 1080p is H.264, which every player opens. Larger sizes are VP9 or AV1 — fine in Chrome, VLC and recent Macs, refused by older QuickTime.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

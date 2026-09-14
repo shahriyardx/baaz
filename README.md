@@ -166,9 +166,9 @@ You mostly don't have to do anything:
 - **Videos**: move your mouse over a video on YouTube, Facebook, TikTok,
   Instagram, X or Vimeo. A **Download** button appears on the video. Click
   it, pick a quality (or "Audio only" for mp3), done.
-  Up to 1080p you get H.264, which every player opens. 4K and 1440p exist on
-  YouTube only as VP9 and AV1, so those are offered separately and marked —
-  QuickTime cannot play them, VLC can.
+  The menu lists what that video actually has. Up to 1080p is normally H.264,
+  which every player opens; larger sizes are usually VP9 or AV1 and are
+  labelled as such, since older players refuse them.
 - **Watch progress**: on Omarchy look at your bar, on macOS look at the menu
   bar near the clock — it shows speed and percent while anything downloads.
   Click it for the full list with pause, resume, and cancel buttons. Click a

@@ -26,30 +26,34 @@
   // on a 720p clip promises a download that cannot happen. The daemon asks
   // yt-dlp and the menu is rebuilt from the answer.
 
-  // Above 1080p YouTube has only VP9 and AV1, which QuickTime cannot play.
-  function labelFor(height) {
-    if (height >= 2160) return "4K · needs VLC";
-    if (height > 1080) return height + "p · needs VLC";
-    return height + "p";
+  // Whether a file plays is a property of its codec, not its resolution.
+  // H.264 opens in everything; VP9 and AV1 are fine in Chrome, VLC, IINA and
+  // recent Macs, but older QuickTime refuses them. So the note names the
+  // codec and leaves the judgement to whoever knows their own player,
+  // instead of asserting "needs VLC" from the resolution alone.
+  function labelFor(q) {
+    const p = q.label + "p";
+    if (!q.codec || q.codec === "h264") return p;
+    if (q.codec === "vp9") return p + " · VP9";
+    if (q.codec === "av1") return p + " · AV1";
+    return p;
   }
 
-  // Built from the heights the video reports, not a list of expected ones:
-  // YouTube's ladder is 2160/1440/1080/720/480, Facebook's is more often
-  // 1080/720/540/360, and hardcoding either leaves the other with an empty
-  // menu. Anything under 240p is a thumbnail strip, not a choice.
-  function qualitiesFor(heights) {
-    if (!heights || !heights.length) return null;
-    const usable = heights.filter((h) => h >= 240).slice(0, 6);
+  // Built from what the video reports rather than an expected ladder:
+  // YouTube goes 2160/1440/1080/720/480, Facebook exposes no sizes at all,
+  // and hardcoding either leaves the other wrong. Anything under 240p is a
+  // thumbnail strip, not a choice.
+  function qualitiesFor(qualities) {
+    if (!qualities || !qualities.length) return null;
+    const usable = qualities.filter((q) => q.label >= 240).slice(0, 6);
     if (!usable.length) return null;
     return [
       { key: "best", label: "Best · plays anywhere" },
-      ...usable.map((h) => ({ key: String(h), label: labelFor(h) })),
+      ...usable.map((q) => ({ key: String(q.label), label: labelFor(q) })),
       { key: "audio", label: "Audio only · mp3" },
     ];
   }
 
-  // Sites that expose no resolutions still download fine — yt-dlp picks the
-  // best stream itself.
   const ONLY_BEST = [
     { key: "best", label: "Best quality" },
     { key: "audio", label: "Audio only · mp3" },
@@ -244,14 +248,14 @@
   const formatsPending = new Set();
 
   function menuItemsFor(url) {
-    const heights = formatsCache.get(url);
-    if (heights === undefined) return null;   // still asking
-    if (heights === null) return FALLBACK_QUALITIES; // lookup failed: guess
+    const qualities = formatsCache.get(url);
+    if (qualities === undefined) return null;   // still asking
+    if (qualities === null) return FALLBACK_QUALITIES; // lookup failed: guess
     // Answered, but with no resolutions to choose between. Facebook is the
     // common case: its formats are named "sd" and "hd" and carry no height
     // at all. Offering 1080p there would promise something that does not
     // exist, which is the whole bug this set out to fix.
-    return qualitiesFor(heights) || ONLY_BEST;
+    return qualitiesFor(qualities) || ONLY_BEST;
   }
 
   function loadFormats(url) {
@@ -263,7 +267,7 @@
       // an empty list means the fallback menu is shown rather than nothing.
       // null distinguishes a failed lookup from one that succeeded with
       // nothing to offer; the two deserve different menus.
-      formatsCache.set(url, reply && reply.ok ? (reply.heights || []) : null);
+      formatsCache.set(url, reply && reply.ok ? (reply.qualities || []) : null);
       // Only redraw if this is still the video under the cursor.
       if (pageMode && pageURL === url && menu && menu.style.display !== "none") {
         renderMenu(menuItemsFor(url));

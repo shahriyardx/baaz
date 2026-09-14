@@ -18,7 +18,7 @@ type Backend interface {
 	Clear() error
 	Delete(id string) error
 	Snapshot() *Snapshot
-	Formats(url string) ([]int, error)
+	Formats(url string) ([]QualityInfo, error)
 	Subscribe() (<-chan *Snapshot, func())
 	SetSettings(kv map[string]string) error
 }
@@ -87,11 +87,11 @@ func (s *Server) dispatch(req *Request) Response {
 		snap := s.backend.Snapshot()
 		return Response{OK: true, Snapshot: snap}
 	case "formats":
-		heights, err := s.backend.Formats(req.URL)
+		qualities, err := s.backend.Formats(req.URL)
 		if err != nil {
 			return Response{OK: false, Error: err.Error()}
 		}
-		return Response{OK: true, Heights: heights}
+		return Response{OK: true, Qualities: qualities}
 	case "add":
 		id, err := s.backend.Add(req.URL, req.Filename, req.Headers, req.Format)
 		if err != nil {

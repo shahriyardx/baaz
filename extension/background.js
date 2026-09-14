@@ -119,7 +119,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const reply = await sendNative({ type: "formats", url: msg.url });
       sendResponse({
         ok: !!(reply && reply.ok),
-        heights: (reply && reply.heights) || [],
+        qualities: (reply && reply.qualities) || [],
       });
     } catch (e) {
       console.warn("baaz formats failed:", e.message);

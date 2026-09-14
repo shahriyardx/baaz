@@ -34,8 +34,8 @@ type Response struct {
 	Error    string    `json:"error,omitempty"`
 	ID       string    `json:"id,omitempty"`
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
-	// Heights a media URL actually offers, tallest first, for "formats".
-	Heights []int `json:"heights,omitempty"`
+	// Resolutions a media URL offers, largest first, for "formats".
+	Qualities []QualityInfo `json:"qualities,omitempty"`
 }
 
 // SegmentInfo is one byte range of a job. Sent only while a job is in
@@ -44,6 +44,14 @@ type Response struct {
 type SegmentInfo struct {
 	Done  int64 `json:"done"`
 	Total int64 `json:"total"` // -1 when the length is unknown
+}
+
+// QualityInfo is one resolution on offer. Label is the number people
+// recognise — the smaller side, so portrait video reads 1080p not 1920p —
+// and Codec says whether it will play anywhere (h264) or not necessarily.
+type QualityInfo struct {
+	Label int    `json:"label"`
+	Codec string `json:"codec"`
 }
 
 type JobInfo struct {
