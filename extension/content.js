@@ -236,9 +236,13 @@
     const visible = wrap && wrap.style.display !== "none";
 
     if (overControl) return; // never yank the control out from under the cursor
+    const idle = Date.now() - lastMove > 2500;
     if (video) {
-      showFor(video, stack);
-      if (visible && !menuOpen && Date.now() - lastMove > 2500) hideUI(); // idle fade
+      // Only a moving cursor shows the button; once idle-faded it stays
+      // hidden until the mouse moves again — re-showing and fading in the
+      // same loop made it blink 4x a second under a resting cursor.
+      if (!idle) showFor(video, stack);
+      else if (visible && !menuOpen) hideUI();
       return;
     }
     if (visible && !menuOpen) hideUI(); // over neither video nor control
