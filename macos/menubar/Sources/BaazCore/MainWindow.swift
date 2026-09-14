@@ -6,10 +6,12 @@ import SwiftUI
 /// The menu bar panel stays the glance; this is where the work happens.
 public struct MainWindow: View {
     @EnvironmentObject var model: DownloadsModel
+    @Environment(\.openWindow) private var openWindow
     @State private var filter: JobFilter = .all
     @State private var selection: String?
     @State private var addingDownload = false
     @State private var search = ""
+    @State private var showInspector = true
 
     public init() {}
 
@@ -39,6 +41,23 @@ public struct MainWindow: View {
                 .tag(f)
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 0) {
+                    Divider()
+                    Button {
+                        openWindow(id: "settings")
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(",", modifiers: .command)
+                }
+                .background(.bar)
+            }
         } detail: {
             detail
         }
@@ -66,16 +85,33 @@ public struct MainWindow: View {
                 action: { addingDownload = true }
             )
         } else {
-            ScrollView {
-                LazyVStack(spacing: 6) {
-                    ForEach(visible) { job in
-                        DownloadCard(job: job, selected: selection == job.id)
-                            .onTapGesture { selection = job.id }
+            HStack(spacing: 0) {
+                ScrollView {
+                    LazyVStack(spacing: 6) {
+                        ForEach(visible) { job in
+                            DownloadCard(job: job, selected: selection == job.id)
+                                .onTapGesture { selection = job.id }
+                        }
                     }
+                    .padding(12)
                 }
-                .padding(12)
+
+                if showInspector, let job = selectedJob {
+                    Divider()
+                    InspectorView(job: job)
+                        .frame(width: 270)
+                        .background(Color(nsColor: .underPageBackgroundColor))
+                        .transition(.move(edge: .trailing))
+                }
             }
         }
+    }
+
+    /// Follows the live job rather than a copy taken at click time, so the
+    /// inspector keeps updating as the download runs.
+    private var selectedJob: Job? {
+        guard let id = selection else { return nil }
+        return model.allJobs.first { $0.id == id }
     }
 
     private var emptyTitle: String {
@@ -123,6 +159,17 @@ public struct MainWindow: View {
                 Label("Open Downloads Folder", systemImage: "folder")
             }
             .help("Open the folder downloads are saved to")
+
+            Button { openWindow(id: "settings") } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .help("Settings (⌘,)")
+
+            Button { showInspector.toggle() } label: {
+                Label("Details", systemImage: "sidebar.right")
+            }
+            .help("Show or hide the details panel")
+            .disabled(selection == nil)
         }
     }
 }

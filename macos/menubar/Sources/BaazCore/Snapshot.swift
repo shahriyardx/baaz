@@ -57,6 +57,11 @@ struct Job: Codable, Equatable, Identifiable {
     var eta: Int64 = -1
     var dir = ""
     var error = ""
+    var url = ""
+    var kind = ""       // "" = direct download, "media" = yt-dlp
+    var noRange = false // the server refused to split it
+    var createdAt = ""
+    var completedAt = ""
     var segments: [JobSegment] = []
 
     init(from decoder: Decoder) throws {
@@ -71,7 +76,20 @@ struct Job: Codable, Equatable, Identifiable {
         dir = try c.decodeIfPresent(String.self, forKey: .dir) ?? ""
         error = try c.decodeIfPresent(String.self, forKey: .error) ?? ""
         segments = try c.decodeIfPresent([JobSegment].self, forKey: .segments) ?? []
+        url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
+        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? ""
+        noRange = try c.decodeIfPresent(Bool.self, forKey: .noRange) ?? false
+        createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
+        completedAt = try c.decodeIfPresent(String.self, forKey: .completedAt) ?? ""
     }
+
+    /// The file on disk, once it has one.
+    var fileURL: URL? {
+        guard !dir.isEmpty, !name.isEmpty else { return nil }
+        return URL(fileURLWithPath: dir).appendingPathComponent(name)
+    }
+
+    var isMedia: Bool { kind == "media" }
 
     /// True when the server supported Range and the file was actually split.
     /// A single segment means one stream — worth saying so rather than

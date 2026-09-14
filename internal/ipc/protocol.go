@@ -55,6 +55,13 @@ type JobInfo struct {
 	Dir   string `json:"dir"`
 	Error string `json:"error,omitempty"`
 
+	// Detail for an inspector; absent on older daemons.
+	URL         string `json:"url,omitempty"`
+	Kind        string `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp
+	NoRange     bool   `json:"noRange,omitempty"` // server refused to split it
+	CreatedAt   string `json:"createdAt,omitempty"`
+	CompletedAt string `json:"completedAt,omitempty"`
+
 	Segments []SegmentInfo `json:"segments,omitempty"`
 }
 

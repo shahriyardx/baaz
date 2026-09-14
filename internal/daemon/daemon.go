@@ -504,6 +504,13 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 	if info.Name == "" {
 		info.Name = j.URL
 	}
+	info.URL = j.URL
+	info.Kind = j.Kind
+	info.NoRange = j.NoRange
+	info.CreatedAt = j.CreatedAt.Format(time.RFC3339)
+	if j.CompletedAt != nil {
+		info.CompletedAt = j.CompletedAt.Format(time.RFC3339)
+	}
 	if j.FinalPath != "" {
 		info.Dir = filepath.Dir(j.FinalPath)
 	}

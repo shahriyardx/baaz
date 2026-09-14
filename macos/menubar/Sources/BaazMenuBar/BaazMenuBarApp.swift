@@ -15,6 +15,12 @@ struct BaazMenuBarApp: App {
         }
         .defaultSize(width: 900, height: 560)
         .commands {
+            // Replaces the app menu's Settings item so ⌘, opens the window
+            // above. The stock Settings scene gave no way to open it from the
+            // UI at all.
+            CommandGroup(replacing: .appSettings) {
+                SettingsMenuButton()
+            }
             CommandGroup(replacing: .newItem) {
                 Button("New Download…") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -33,12 +39,12 @@ struct BaazMenuBarApp: App {
             }
         }
 
-        // The standard Settings scene: this is what puts "Settings…" in the
-        // app menu and binds ⌘,.
-        Settings {
+        Window("Settings", id: "settings") {
             SettingsWindow()
                 .environmentObject(delegate.model)
         }
+        .defaultSize(width: 520, height: 380)
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             PanelView()
@@ -50,6 +56,19 @@ struct BaazMenuBarApp: App {
             MenuBarLabel(model: delegate.model)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// Lives in the commands builder, which has no environment of its own.
+private struct SettingsMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Settings…") {
+            NSApp.activate(ignoringOtherApps: true)
+            openWindow(id: "settings")
+        }
+        .keyboardShortcut(",", modifiers: .command)
     }
 }
 

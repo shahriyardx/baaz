@@ -222,6 +222,9 @@ the full window:
   (<kbd>⌘.</kbd> and <kbd>⇧⌘R</kbd>)
 - click **parts** on a running download to watch the file arrive in up to 8
   pieces at once
+- click a download for a **details panel** on the right: size, speed, time
+  left, where it saved, the source link, when it started and finished, and
+  the live parts — with Open / Show in Finder / pause / cancel
 - right-click a finished one to show it in Finder or delete it
 
 **Settings** live under <kbd>⌘,</kbd> (baaz → Settings…), in three tabs:

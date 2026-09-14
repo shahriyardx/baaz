@@ -53,6 +53,7 @@ struct TextButton: View {
 /// downloads, recent downloads, and a settings page behind the gear.
 public struct PanelView: View {
     @EnvironmentObject var model: DownloadsModel
+    @Environment(\.openWindow) private var openWindow
 
     private let width: CGFloat = 340
     private let maxListHeight: CGFloat = 420
@@ -170,7 +171,10 @@ public struct PanelView: View {
     private var footer: some View {
         HStack {
             TextButton(title: "Open baaz") { model.openMainWindow() }
-            TextButton(title: "Settings…") { model.openSettings() }
+            TextButton(title: "Settings…") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "settings")
+            }
 
             Spacer()
             TextButton(title: "Quit") { NSApplication.shared.terminate(nil) }
