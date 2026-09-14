@@ -310,11 +310,7 @@ struct SegmentBars: View {
     }
 
     private var summary: String {
-        guard job.isSplit else {
-            // One range means the server refused to split it, which explains
-            // why this download is not any faster than the browser's.
-            return "1 part — this server doesn't support splitting"
-        }
+        guard job.isSplit else { return job.singlePartReason }
         return "\(job.segments.count) parts in parallel · \(job.segmentsComplete) finished"
     }
 }

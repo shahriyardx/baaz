@@ -126,11 +126,8 @@ struct InspectorView: View {
     /// Says why a download is not split when it is not, since that is the
     /// usual reason one is no faster than the browser's.
     private var partsText: String {
-        if job.isMedia { return "handled by yt-dlp" }
-        if job.noRange || job.segments.count == 1 {
-            return "1 — this server does not support splitting"
-        }
         if job.segments.isEmpty { return "—" }
+        if job.segments.count == 1 { return job.singlePartDetail }
         return "\(job.segments.count) at once"
     }
 
