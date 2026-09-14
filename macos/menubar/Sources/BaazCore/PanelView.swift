@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Reports the measured height of the panel's list to its container.
 struct ListHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    // `let`, not `var`: a mutable static is shared global state, which Swift 6
+    // rejects. The protocol only ever reads it.
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
     }

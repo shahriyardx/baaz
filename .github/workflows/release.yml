@@ -56,6 +56,11 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+      - name: Check the menu bar app under Swift 6
+        # Toolchains differ in how strictly they check concurrency. Building
+        # under the Swift 6 language mode fails here rather than halfway
+        # through a release, and with a clearer message.
+        run: swift build --package-path macos/menubar -c release -Xswiftc -swift-version -Xswiftc 6
       - name: Test the menu bar app
         run: swift test --package-path macos/menubar
       - uses: actions/setup-go@v5

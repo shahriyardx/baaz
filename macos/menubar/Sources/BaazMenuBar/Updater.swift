@@ -10,6 +10,7 @@ import SwiftUI
 ///
 /// The update is downloaded by the app itself rather than a browser, so it
 /// carries no quarantine flag and launches without a Gatekeeper prompt.
+@MainActor
 final class UpdaterController: ObservableObject {
     private let controller: SPUStandardUpdaterController
 
@@ -26,10 +27,16 @@ final class UpdaterController: ObservableObject {
                                                   updaterDelegate: nil,
                                                   userDriverDelegate: nil)
         canCheck = controller.updater.canCheckForUpdates
+        // The KVO callback can arrive on any thread, so the value is carried
+        // over to the main actor. `self` is re-captured on the inner closure:
+        // reaching for the outer closure's captured `self` from inside a Task
+        // is a concurrency error.
         observation = controller.updater.observe(\.canCheckForUpdates, options: [.new]) {
             [weak self] _, change in
             guard let value = change.newValue else { return }
-            Task { @MainActor in self?.canCheck = value }
+            Task { @MainActor [weak self] in
+                self?.canCheck = value
+            }
         }
     }
 

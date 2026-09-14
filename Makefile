@@ -66,7 +66,13 @@ macos-app:
 macos-dmg:
 	./macos/make-dmg.sh $(BUILD) $(VERSION)
 
-macos-test:
+# Swift 6 language mode is stricter than the default, and stricter than some
+# CI toolchains — building under it locally is what stops a concurrency error
+# reaching the release runner.
+macos-strict:
+	swift build --package-path macos/menubar -c release -Xswiftc -swift-version -Xswiftc 6
+
+macos-test: macos-strict
 	swift test --package-path macos/menubar
 
 # XProtect deletes Go binaries that match its adware signature; see the

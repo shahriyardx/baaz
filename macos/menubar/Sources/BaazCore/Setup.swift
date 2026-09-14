@@ -28,14 +28,19 @@ public enum Setup {
     /// Runs setup when this version has not been set up yet. Cheap and
     /// idempotent, so re-running after an upgrade refreshes the CLI, the
     /// native-messaging manifest and the unpacked extension.
-    public static func runIfNeeded(onFinished: @escaping (Bool) -> Void) {
+    /// The callback is @Sendable and hops back to the main actor itself:
+    /// handing a plain closure across a queue boundary is a data race the
+    /// compiler rejects.
+    public static func runIfNeeded(onFinished: @escaping @Sendable (Bool) -> Void) {
         let done = UserDefaults.standard.string(forKey: versionKey) == appVersion
+        let version = appVersion
         DispatchQueue.global(qos: .utility).async {
             let installed = install()
             if installed {
-                UserDefaults.standard.set(appVersion, forKey: versionKey)
+                UserDefaults.standard.set(version, forKey: versionKey)
             }
-            DispatchQueue.main.async { onFinished(installed && !done) }
+            let firstRun = installed && !done
+            DispatchQueue.main.async { onFinished(firstRun) }
         }
     }
 
