@@ -73,7 +73,12 @@ jobs:
       - name: Build Baaz.dmg
         # Builds the app too: the bundle carries the baaz CLI, so the dmg is
         # the whole macOS install rather than an app plus a setup script.
-        run: ./macos/make-dmg.sh build "${GITHUB_REF_NAME#v}"
+        run: |
+          ./macos/make-dmg.sh build "${GITHUB_REF_NAME#v}"
+          # Up to the workspace root: an artifact keeps the directory
+          # structure of what it uploads, and the release job looks for these
+          # by bare name.
+          mv build/Baaz.dmg .
       - name: Zip the app as well
         # ditto preserves the bundle's symlinks and the ad-hoc signature;
         # plain `zip` breaks both and the app will not launch.
@@ -104,7 +109,7 @@ jobs:
         with:
           name: macos-app
           path: |
-            build/Baaz.dmg
+            Baaz.dmg
             Baaz-macos.zip
             appcast.xml
           if-no-files-found: warn
@@ -121,6 +126,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          # Without this a missing asset is skipped in silence: v0.1.6 first
+          # published with no Baaz.dmg, which is the macOS install itself.
+          fail_on_unmatched_files: true
           files: |
             baaz-linux-amd64
             baaz-linux-arm64
