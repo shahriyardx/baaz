@@ -89,22 +89,40 @@ private struct TransferSettings: View {
             }
 
             Section {
-                Stepper("Downloads at the same time: \(model.settings.maxActive)",
-                        value: bind("max-active", model.settings.maxActive), in: 1...10)
-                Stepper("Parts per file: \(model.settings.segments)",
-                        value: bind("segments", model.settings.segments), in: 1...32)
+                numberRow("Downloads at the same time",
+                          key: "max-active", value: model.settings.maxActive, in: 1...10)
+                numberRow("Parts per file",
+                          key: "segments", value: model.settings.segments, in: 1...32)
                 Text("A file is fetched as this many pieces at once. More is not always faster, and servers without range support always get one.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {
-                Stepper("Only take over files above: \(model.settings.minSizeMB) MB",
-                        value: bind("min-size", model.settings.minSizeMB), in: 0...500, step: 5)
+                numberRow("Only take over files above",
+                          key: "min-size", value: model.settings.minSizeMB,
+                          in: 0...500, step: 5, unit: " MB")
                 Text("Smaller downloads stay with Chrome.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// A settings line: label on the left, the value and its stepper together
+    /// on the right, where the other controls in this window sit. Putting the
+    /// number inside the label left it stranded mid-row.
+    private func numberRow(_ label: String, key: String, value: Int,
+                           in range: ClosedRange<Int>, step: Int = 1,
+                           unit: String = "") -> some View {
+        LabeledContent(label) {
+            HStack(spacing: 8) {
+                Text("\(value)\(unit)")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Stepper("", value: bind(key, value), in: range, step: step)
+                    .labelsHidden()
+            }
+        }
     }
 
     /// Writes through to the daemon; the snapshot brings the value back.
