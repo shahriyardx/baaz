@@ -41,23 +41,7 @@ public struct MainWindow: View {
                 .tag(f)
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 0) {
-                    Divider()
-                    Button {
-                        openWindow(id: "settings")
-                    } label: {
-                        Label("Settings", systemImage: "gearshape")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(",", modifiers: .command)
-                }
-                .background(.bar)
-            }
+
         } detail: {
             detail
         }
