@@ -8,3 +8,6 @@ macos/menubar/.build/
 *.pem
 !keys/extension-key.pem
 sparkle_private_key*
+# Intermediates for background.tiff; regenerate with macos/dmg/render-background.swift
+macos/dmg/background.png
+macos/dmg/background@2x.png

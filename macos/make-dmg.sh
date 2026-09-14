@@ -5,6 +5,11 @@
 # wires everything up on first launch, so there is nothing to run in a
 # terminal afterwards.
 #
+# The window the user sees — size, background, icon positions — comes from
+# macos/dmg/DS_Store, which is generated separately by macos/dmg/make-layout.sh
+# and committed. Laying the window out needs a logged-in Finder, and CI has
+# none; copying a prepared .DS_Store in needs nothing at all.
+#
 # Usage: macos/make-dmg.sh [OUTPUT_DIR] [VERSION]
 set -euo pipefail
 
@@ -20,35 +25,51 @@ dmg="$out/Baaz.dmg"
 [ -d "$app" ] || { echo "make-dmg: $app missing"; exit 1; }
 
 # Stage exactly what the window should show: the app, and a shortcut to drop
-# it on. Anything else here becomes clutter in the mounted volume.
+# it on. Anything else here becomes clutter in the mounted volume — the
+# instructions live in the background image instead of a Read Me nobody opens.
 stage="$(mktemp -d)"
-trap 'rm -rf "$stage"' EXIT
+trap 'hdiutil detach "$stage.mnt" -quiet -force 2>/dev/null || true; rm -rf "$stage" "$stage.mnt" "$stage.rw.dmg"' EXIT
 cp -R "$app" "$stage/Baaz.app"
 ln -s /Applications "$stage/Applications"
 
-# A README the user sees before installing, covering the one manual step.
-cat > "$stage/Read Me.txt" <<'TXT'
-baaz — fast downloads for Chrome
+mkdir -p "$stage/.background"
+cp "$here/dmg/background.tiff" "$stage/.background/background.tiff"
 
-1. Drag Baaz.app onto the Applications folder.
-2. Open it. A falcon appears in the menu bar near the clock.
-   (First launch: right-click the app and choose Open — the app is not
-   notarized, so a plain double-click is refused once.)
-
-Opening it sets up everything except the Chrome extension, which Chrome
-does not let an app install. The app will show you how: in Chrome open
-chrome://extensions, turn on Developer mode, click "Load unpacked", and
-pick the baaz-extension folder in your Downloads.
-TXT
+# Give the mounted volume the app's own icon, so it shows as the falcon on
+# the desktop and in the Finder sidebar rather than a generic white disk.
+# The icon file is staged here; the attribute that makes the system use it
+# has to be set on the mounted volume, below.
+icns="$app/Contents/Resources/Baaz.icns"
+[ -f "$icns" ] && cp "$icns" "$stage/.VolumeIcon.icns"
+if [ -f "$here/dmg/DS_Store" ]; then
+  cp "$here/dmg/DS_Store" "$stage/.DS_Store"
+else
+  # Without it the volume still installs correctly, it just opens as a plain
+  # Finder window. Worth saying out loud rather than shipping it silently.
+  echo "make-dmg: warning: macos/dmg/DS_Store missing — window will be unstyled"
+fi
 
 rm -f "$dmg"
-hdiutil create \
-  -volname "baaz" \
-  -srcfolder "$stage" \
-  -fs HFS+ \
-  -format UDZO \
-  -imagekey zlib-level=9 \
-  -quiet \
-  "$dmg"
+rw="$stage.rw.dmg"
+hdiutil create -volname "Baaz" -srcfolder "$stage" -fs HFS+ -format UDRW -quiet "$rw"
+
+# Mark the volume as having a custom icon. This needs the volume mounted —
+# the attribute lives on the volume root, and setting it on the folder that
+# was handed to hdiutil does not survive imaging. Mounting needs no window
+# server, so this is fine on a headless runner; it is still best-effort,
+# because a cosmetic icon is not worth failing a release over.
+mnt="$stage.mnt"
+mkdir -p "$mnt"
+if hdiutil attach "$rw" -quiet -nobrowse -noautoopen -mountpoint "$mnt" 2>/dev/null; then
+  if [ -f "$mnt/.VolumeIcon.icns" ] && command -v SetFile >/dev/null 2>&1; then
+    SetFile -a C "$mnt" 2>/dev/null || echo "make-dmg: note: could not set the volume icon attribute"
+  fi
+  hdiutil detach "$mnt" -quiet || hdiutil detach "$mnt" -quiet -force || true
+else
+  echo "make-dmg: note: could not mount the image; volume icon skipped"
+fi
+
+hdiutil convert "$rw" -format UDZO -imagekey zlib-level=9 -quiet -o "$dmg"
+rm -f "$rw"
 
 echo "built $dmg ($(du -h "$dmg" | cut -f1))"
