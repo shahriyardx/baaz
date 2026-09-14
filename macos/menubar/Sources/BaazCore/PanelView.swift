@@ -80,11 +80,7 @@ public struct PanelView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    if model.showingSettings {
-                        SettingsView()
-                    } else {
-                        body_
-                    }
+                    body_
                 }
                 .padding(12)
                 .frame(width: width, alignment: .leading)
@@ -157,9 +153,13 @@ public struct PanelView: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 4)
-            IconButton(systemName: model.showingSettings ? "chevron.left" : "gearshape",
-                       help: model.showingSettings ? "Back" : "Settings") {
-                model.showingSettings.toggle()
+            // Opens the Settings window rather than swapping this panel's
+            // contents. Swapping changed the panel's height, and the menu bar
+            // window grows to fit but never shrinks back — leaving the
+            // downloads list floating in a settings-sized box.
+            IconButton(systemName: "gearshape", help: "Settings") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "settings")
             }
 
             Toggle("", isOn: Binding(

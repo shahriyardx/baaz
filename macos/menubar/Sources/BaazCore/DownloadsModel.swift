@@ -50,8 +50,6 @@ public final class DownloadsModel: ObservableObject {
 
     @Published private(set) var snapshot = Snapshot()
     @Published private(set) var daemonUp = false
-    @Published var showingSettings = false
-
     /// Job IDs whose segment breakdown is open. Held here rather than in the
     /// row so it survives the view being rebuilt on every snapshot.
     @Published private(set) var expanded: Set<String> = []

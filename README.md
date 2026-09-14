@@ -200,7 +200,7 @@ the full window:
 - **Browser** — Chrome takeover on/off, and the extension folder with a
   button to re-run the Chrome setup
 
-The gear in the menu bar panel is the same settings, kept short.
+The gear in the menu bar panel opens the same window.
 
 Closing the window doesn't quit — downloads keep running and the falcon stays
 in the menu bar. Quit from the menu or <kbd>⌘Q</kbd>.
@@ -220,12 +220,12 @@ Downloads/Images/        pictures
 Downloads/Other/         everything else
 ```
 
-Don't like sorting? Turn it off: widget → gear icon → "Sort into category
+Don't like sorting? Turn it off in Settings → General → "Sort into category
 folders", and files land straight in `Downloads/`.
 
 ## Settings
 
-Click the widget → the **gear icon**:
+Settings (<kbd>⌘,</kbd>, or the gear in the menu bar panel):
 
 - **where downloads are saved** — "Saving to" → **Change…** picks a folder
 - **speed limit** — cap total throughput so a download stops saturating your line
