@@ -48,10 +48,10 @@ Faster downloads in Chrome - files are split into parts, and videos download wit
 ----
 
 CATEGORY
-    Workflow & Planning        (Productivity also fits)
+    Tools                      (Workflow & Planning also fits)
 
 LANGUAGE
-    English
+    English (United States)    - this is required, the form starts unset
 
 WEBSITE
     https://github.com/shahriyardx/baaz
@@ -154,7 +154,7 @@ Stores one setting: whether the user has the extension switched on. Nothing
 else is kept.
 ----
 
-Host permission <all_urls>
+Host permission use  (the console's label for <all_urls>)
 ----
 A download can start from any site, and the Download button has to be able
 to appear over a video on any site. The extension reads the page only to
@@ -162,9 +162,15 @@ find the video's address; it does not read or transmit page content.
 ----
 
 REMOTE CODE
-    Answer: No.
-    Every file the extension runs is inside the package. Nothing is fetched
-    or evaluated at runtime.
+    Select: "No, I am not using remote code"
+    The console asks for a justification even when the answer is no. Paste:
+----
+Baaz does not use remote code. Every JavaScript file it executes is included
+in the package. The extension makes no network requests of its own, and
+never loads, fetches, injects or evaluates code at runtime. There is no use
+of eval, new Function, or dynamically inserted script tags anywhere in the
+extension.
+----
 
 DATA USAGE - TICK ONLY THESE TWO
     [x] Authentication information
