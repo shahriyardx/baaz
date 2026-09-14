@@ -60,12 +60,38 @@ cat > "$app/Contents/Info.plist" <<PLIST
 	<key>CFBundleVersion</key><string>${version}</string>
 	<key>CFBundleIconFile</key><string>Baaz</string>
 	<key>LSMinimumSystemVersion</key><string>13.0</string>
+	<!-- Sparkle. The appcast is published as a release asset, so the
+	     "latest" URL always points at the newest one. SUPublicEDKey is the
+	     public half of the EdDSA key; updates not signed with the private
+	     half are refused, which is what makes this safe without an Apple
+	     Developer ID. The private half lives in the maintainer's keychain
+	     and in the SPARKLE_PRIVATE_KEY secret used by CI. -->
+	<key>SUFeedURL</key><string>https://github.com/shahriyardx/baaz/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key><string>qHGXvXUiaDOIUPV+m4Mrte2irv1OQ9yx6xR+fMLfYTI=</string>
+	<key>SUEnableAutomaticChecks</key><true/>
+	<key>SUScheduledCheckInterval</key><integer>86400</integer>
 	<key>NSHighResolutionCapable</key><true/>
 	<!-- A normal app: Dock tile, app switcher, main window. The menu bar
 	     item is in addition to that, not instead of it. -->
 </dict>
 </plist>
 PLIST
+
+# Sparkle ships as a framework the executable links against by @rpath, so it
+# has to live in the bundle and the binary needs a path to it. The universal
+# slice of the xcframework matches the universal app.
+sparkle="$(find "$here/menubar/.build/artifacts" -type d \
+  -path "*macos-arm64_x86_64/Sparkle.framework" -print -quit 2>/dev/null || true)"
+if [ -n "$sparkle" ]; then
+  mkdir -p "$app/Contents/Frameworks"
+  # ditto, not cp: the framework is a bundle of version symlinks.
+  ditto "$sparkle" "$app/Contents/Frameworks/Sparkle.framework"
+  install_name_tool -add_rpath "@executable_path/../Frameworks" \
+    "$macos_dir/BaazMenuBar" 2>/dev/null || true
+  echo "embedded Sparkle.framework"
+else
+  echo "make-app: WARNING — Sparkle.framework not found; in-app updates will not work"
+fi
 
 # Icon: reuse the extension artwork. Only Finder ever shows it (LSUIElement
 # hides the Dock tile), so the largest PNG on hand is enough.

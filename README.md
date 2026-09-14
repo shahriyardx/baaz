@@ -136,6 +136,13 @@ without `sudo`.
 
 ## Updating
 
+**macOS** updates itself. baaz checks once a day and offers the update; you
+click Install and it downloads, replaces itself and relaunches — no dragging,
+no Gatekeeper prompt. **baaz → Check for Updates…** does it on demand.
+
+Updates are signed with an EdDSA key and refused if the signature does not
+match the one built into the app, so a tampered build cannot install itself.
+
 ```
 yay -Syu baaz            # Arch / Omarchy
 ```
@@ -324,6 +331,17 @@ Store), so macOS unpacks the extension and the user loads it once. Publishing
 to the Web Store would let macOS use a forced `external_update_url` instead. The Swift model in
 `Sources/BaazCore/Snapshot.swift` mirrors `internal/ipc/protocol.go`; its
 tests decode real `baaz status --json` output to catch drift.
+
+**Updates.** Sparkle checks `appcast.xml`, published as an asset of each
+release, and verifies the archive's EdDSA signature against `SUPublicEDKey`
+in Info.plist. That is what makes updates safe without an Apple Developer ID,
+and the update is fetched by the app rather than a browser so it carries no
+quarantine flag and launches without a Gatekeeper prompt.
+
+CI signs the archive with the `SPARKLE_PRIVATE_KEY` secret — the private half
+of that key pair, exported from the maintainer's keychain with
+`generate_keys -x`. Without the secret a release still publishes, but no
+appcast is generated and existing installs will not see it.
 
 **macOS: XProtect.** Apple's rule `macos_adload_g_bundle` deletes any Mach-O
 under 15MB containing all of `_main.main`,

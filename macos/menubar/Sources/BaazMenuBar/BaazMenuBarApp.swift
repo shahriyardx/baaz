@@ -5,6 +5,7 @@ import SwiftUI
 @main
 struct BaazMenuBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @StateObject private var updater = UpdaterController()
 
     var body: some Scene {
         // The real app: a window with every download and the controls for
@@ -18,6 +19,9 @@ struct BaazMenuBarApp: App {
             // Replaces the app menu's Settings item so ⌘, opens the window
             // above. The stock Settings scene gave no way to open it from the
             // UI at all.
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesButton(updater: updater)
+            }
             CommandGroup(replacing: .appSettings) {
                 SettingsMenuButton()
             }

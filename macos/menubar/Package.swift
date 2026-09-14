@@ -10,11 +10,20 @@ import PackageDescription
 let package = Package(
     name: "BaazMenuBar",
     platforms: [.macOS(.v13)],
+    dependencies: [
+        // Sparkle delivers in-app updates. It checks an appcast, verifies the
+        // archive's EdDSA signature, replaces the bundle and relaunches —
+        // none of which needs an Apple Developer ID.
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
+    ],
     targets: [
         .target(name: "BaazCore", path: "Sources/BaazCore"),
         .executableTarget(
             name: "BaazMenuBar",
-            dependencies: ["BaazCore"],
+            dependencies: [
+                "BaazCore",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
             path: "Sources/BaazMenuBar"
         ),
         .testTarget(

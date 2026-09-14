@@ -4,3 +4,7 @@
 /build/
 macos/menubar/.build/
 .DS_Store
+# Sparkle private key, if ever exported here by mistake
+*.pem
+!keys/extension-key.pem
+sparkle_private_key*

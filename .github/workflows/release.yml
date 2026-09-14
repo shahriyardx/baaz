@@ -69,12 +69,36 @@ jobs:
         # ditto preserves the bundle's symlinks and the ad-hoc signature;
         # plain `zip` breaks both and the app will not launch.
         run: ditto -c -k --keepParent build/Baaz.app Baaz-macos.zip
+      - name: Sign the update and generate the appcast
+        # Sparkle refuses an update whose EdDSA signature does not match the
+        # public key in Info.plist, which is what makes in-app updates safe
+        # without an Apple Developer ID. Without the secret the release still
+        # publishes — it just cannot be auto-updated to.
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::warning::SPARKLE_PRIVATE_KEY is not set — skipping the appcast, so in-app updates will not see this release"
+            exit 0
+          fi
+          tools="$(find macos/menubar/.build/artifacts -type d -path '*sparkle*/bin' | head -1)"
+          [ -n "$tools" ] || { echo "sparkle tools missing"; exit 1; }
+          keyfile="$(mktemp)"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$keyfile"
+          mkdir -p appcast-src
+          cp Baaz-macos.zip appcast-src/
+          "$tools/generate_appcast"             --ed-key-file "$keyfile"             --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/"             appcast-src
+          mv appcast-src/appcast.xml .
+          echo "appcast:"; cat appcast.xml
       - uses: actions/upload-artifact@v4
         with:
           name: macos-app
           path: |
             build/Baaz.dmg
             Baaz-macos.zip
+            appcast.xml
+          if-no-files-found: warn
 
   release:
     needs: [build, macos-app]
@@ -96,6 +120,7 @@ jobs:
             baaz-extension.zip
             Baaz.dmg
             Baaz-macos.zip
+            appcast.xml
             install.sh
 
   aur:
