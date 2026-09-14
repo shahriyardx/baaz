@@ -8,6 +8,16 @@ import Foundation
 /// also auto-starts the daemon, so the UI never polls — it renders whatever
 /// the last snapshot said. If the process dies (daemon killed, binary gone) a
 /// timer restarts it after a pause, so a missing binary cannot spin the CPU.
+/// Holds SwiftUI's openWindow action so code outside the view hierarchy can
+/// open a window too — the Dock-reopen handler lives on the app delegate,
+/// which has no SwiftUI environment of its own.
+@MainActor
+public enum WindowOpener {
+    public static var action: ((String) -> Void)?
+
+    public static func open(_ id: String) { action?(id) }
+}
+
 /// Which downloads the main window is showing.
 public enum JobFilter: String, CaseIterable, Identifiable {
     case all, active, paused, done, failed
@@ -232,25 +242,13 @@ public final class DownloadsModel: ObservableObject {
     }
 
     /// Brings the main window forward, reopening it if it was closed.
+    ///
+    /// Goes through SwiftUI's own openWindow. Poking at selectors did not
+    /// work: a closed Window scene is not in NSApp.windows to be raised, and
+    /// raising "the first window that can become main" could pick Settings.
     public func openMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        // The window may be closed rather than merely hidden; this is the
-        // same path the Dock icon uses to bring it back.
-        NSApp.sendAction(Selector(("showMainWindow:")), to: nil, from: nil)
-        for w in NSApp.windows where w.canBecomeMain {
-            w.makeKeyAndOrderFront(nil)
-            return
-        }
-    }
-
-    /// Opens the app's Settings window (the same one as ⌘,).
-    public func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        // The selector was renamed in macOS 14; try the current one first.
-        let modern = Selector(("showSettingsWindow:"))
-        let legacy = Selector(("showPreferencesWindow:"))
-        if NSApp.sendAction(modern, to: nil, from: nil) { return }
-        NSApp.sendAction(legacy, to: nil, from: nil)
+        WindowOpener.open("main")
     }
 
     /// Opens the configured download root in Finder.

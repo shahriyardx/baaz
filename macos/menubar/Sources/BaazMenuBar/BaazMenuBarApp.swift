@@ -19,6 +19,9 @@ struct BaazMenuBarApp: App {
             // Replaces the app menu's Settings item so ⌘, opens the window
             // above. The stock Settings scene gave no way to open it from the
             // UI at all.
+            CommandGroup(after: .windowList) {
+                WindowMenuButton()
+            }
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesButton(updater: updater)
             }
@@ -63,6 +66,18 @@ struct BaazMenuBarApp: App {
     }
 }
 
+private struct WindowMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("baaz Downloads") {
+            NSApp.activate(ignoringOtherApps: true)
+            openWindow(id: "main")
+        }
+        .keyboardShortcut("0", modifiers: .command)
+    }
+}
+
 /// Lives in the commands builder, which has no environment of its own.
 private struct SettingsMenuButton: View {
     @Environment(\.openWindow) private var openWindow
@@ -78,6 +93,7 @@ private struct SettingsMenuButton: View {
 
 private struct MenuBarLabel: View {
     @ObservedObject var model: DownloadsModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         HStack(spacing: 4) {
@@ -89,6 +105,10 @@ private struct MenuBarLabel: View {
                 Text(model.barText).font(.system(size: 11).monospacedDigit())
             }
         }
+        // The menu bar label exists from launch, before any window or panel
+        // has been shown, so it is the earliest reliable place to capture
+        // SwiftUI's openWindow for code outside the view hierarchy.
+        .onAppear { WindowOpener.action = { openWindow(id: $0) } }
     }
 }
 

@@ -99,6 +99,11 @@ public struct PanelView: View {
             footer
         }
         .frame(width: width)
+        .onAppear {
+            // The menu bar panel outlives every window, so this is where the
+            // action is captured for anything that needs it later.
+            WindowOpener.action = { openWindow(id: $0) }
+        }
     }
 
     @ViewBuilder
@@ -170,7 +175,10 @@ public struct PanelView: View {
 
     private var footer: some View {
         HStack {
-            TextButton(title: "Open baaz") { model.openMainWindow() }
+            TextButton(title: "Open baaz") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
+            }
             TextButton(title: "Settings…") {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "settings")
