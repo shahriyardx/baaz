@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .chrome-frame {
+    width: 470px; border-radius: 16px; overflow: hidden;
+    background: #101216; border: 1px solid #262b34;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
+  }
+  .bar {
+    height: 44px; display: flex; align-items: center; gap: 7px; padding: 0 13px;
+    background: #171a20; border-bottom: 1px solid #262b34;
+  }
+  .bar i { width: 10px; height: 10px; border-radius: 50%; background: #2f3541; display: block; }
+  .bar .url {
+    flex: 1; margin-left: 8px; height: 21px; border-radius: 6px;
+    background: #101216; border: 1px solid #262b34;
+  }
+  .bar .ext { width: 21px; height: 21px; border-radius: 5px; background: rgba(79,140,255,.22); }
+  iframe {
+    width: 300px; height: 176px; border: 0; display: block;
+    transform: scale(1.565); transform-origin: top left;
+  }
+  .popup-hold { width: 470px; height: 276px; overflow: hidden; }
+</style></head><body>
+<div class="copy">
+  <svg class="mark" viewBox="0 0 128 128" fill="currentColor">
+    <path d="M62 34C48 42 34 45 20 42c10 15 27 22 39 24l3-8Z"/>
+    <path d="M66 34c14 8 28 11 42 8-10 15-27 22-39 24l-3-8Z"/>
+    <path d="M64 30l9 32-9 40-9-40Z"/><rect x="38" y="106" width="52" height="7" rx="3.5"/>
+  </svg>
+  <h1>Chrome downloads,<br><em>up to 8&times; faster</em></h1>
+  <p>Baaz splits big files into parts and fetches them at once. One switch turns it on, and the rest happens in the background.</p>
+</div>
+<div class="stage"><div class="chrome-frame">
+  <div class="bar"><i></i><i></i><i></i><span class="url"></span><span class="ext"></span></div>
+  <div class="popup-hold"><iframe src="popup-live.html" scrolling="no"></iframe></div>
+</div></div>
+</body></html>

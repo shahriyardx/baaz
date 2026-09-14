@@ -4,7 +4,8 @@ APP     := $(HOME)/Applications/Baaz.app
 BUILD   := build
 VERSION := 0.0.0-dev
 
-.PHONY: build test install install-plugin install-chrome uninstall extension-store \
+.PHONY: build test install install-plugin install-chrome uninstall \
+        extension-store extension-screenshots \
         macos-app macos-dmg macos-test macos-install macos-check
 
 build:
@@ -14,6 +15,10 @@ build:
 # because the store assigns its own ID and rejects a package carrying one.
 extension-store:
 	./extension/pack-store.sh
+
+# 1280x800 listing screenshots, rendered from the real popup markup.
+extension-screenshots:
+	./extension/store-assets/render.sh $(BUILD)/store-screenshots
 
 test:
 	go test ./...

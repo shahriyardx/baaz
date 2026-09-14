@@ -82,13 +82,21 @@ https://github.com/shahriyardx/baaz
 Open source, MIT licensed.
 ----
 
-SCREENSHOTS TO TAKE
-    1. The popup open, with a download running.
-    2. The Download button hovering over a video, quality menu open.
-    3. The Baaz app window with several downloads and the parts view open.
+SCREENSHOTS
+    Already made. Run:  make extension-screenshots
+    Output: build/store-screenshots/ - three 1280x800 PNGs, upload in order.
 
-    A listing is rejected if a screenshot shows page content you do not have
-    rights to. Use your own pages, or public licence-free video.
+        1-faster-downloads.png   the popup, mid-download
+        2-video-one-click.png    the Download button and quality menu
+        3-privacy.png            what Baaz does not do
+
+    They show only our own interface. A listing is rejected for showing page
+    content whose rights are not yours, so the video is a plain placeholder
+    rather than a real site.
+
+    To change the wording or layout, edit extension/store-assets/scene*.html
+    and run the command again. Scene 1 loads popup.html itself, so the popup
+    in the screenshot is always the real one.
 
 
 -----------------------------------------------------------------------
