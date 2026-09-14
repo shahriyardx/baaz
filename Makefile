@@ -4,11 +4,16 @@ APP     := $(HOME)/Applications/Baaz.app
 BUILD   := build
 VERSION := 0.0.0-dev
 
-.PHONY: build test install install-plugin install-chrome uninstall \
+.PHONY: build test install install-plugin install-chrome uninstall extension-store \
         macos-app macos-dmg macos-test macos-install macos-check
 
 build:
 	go build -o baaz ./cmd/baaz
+
+# A Chrome Web Store upload: the same extension with the "key" field stripped,
+# because the store assigns its own ID and rejects a package carrying one.
+extension-store:
+	./extension/pack-store.sh
 
 test:
 	go test ./...

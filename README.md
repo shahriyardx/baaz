@@ -334,6 +334,19 @@ of that key pair, exported from the maintainer's keychain with
 `generate_keys -x`. Without the secret a release still publishes, but no
 appcast is generated and existing installs will not see it.
 
+**Publishing the extension.** `make extension-store` builds the upload. The
+only difference from what baaz ships is the `key` field: locally it pins the
+extension ID so unpacked loads, the packed CRX and the native-messaging
+manifest all agree, but the store ignores it, assigns an ID of its own, and
+rejects a package that carries one — so the script strips it rather than
+removing it from the manifest, which would break every other install route.
+
+After the first upload, copy the public key the dashboard shows into
+`extension/manifest.json` as `key`, and set `defaultExtID` to the ID the
+dashboard assigns. Every route then shares the published ID. The key
+currently committed in `keys/` only pins the local ID; generate a fresh one
+if the extension is ever self-hosted again.
+
 **macOS: XProtect.** Apple's rule `macos_adload_g_bundle` deletes any Mach-O
 under 15MB containing all of `_main.main`,
 `/Library/Application Support/Google/Chrome/`, `killall` and `cfprefs` — an
