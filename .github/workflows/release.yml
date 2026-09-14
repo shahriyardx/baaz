@@ -53,7 +53,10 @@ jobs:
             baaz-extension.zip
 
   macos-app:
-    runs-on: macos-14
+    # macos-14 ships Swift 5.10, which is far enough behind current toolchains
+    # that "it builds locally" stopped predicting anything — three releases
+    # failed here on concurrency diagnostics that a newer compiler accepts.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Test the menu bar app

@@ -135,8 +135,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Dragging the app out of the DMG is the install: this puts the CLI
         // on PATH, wires up Chrome and registers the login item. Loading the
         // extension is the one step Chrome will not let an app do.
+        // The callback is @Sendable and therefore nonisolated; the alert has
+        // to be raised on the main actor explicitly rather than relying on
+        // the callback happening to arrive there.
         Setup.runIfNeeded { firstRun in
-            if firstRun { Self.offerExtensionSetup() }
+            guard firstRun else { return }
+            Task { @MainActor in Self.offerExtensionSetup() }
         }
     }
 
