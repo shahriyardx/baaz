@@ -129,9 +129,8 @@ https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
     Produces build/baaz-extension-store.zip with the "key" field stripped.
     The store assigns its own ID and rejects a package carrying one.
 
-[ ] Run:  make extension-screenshots
-    Produces build/store-screenshots/ - three 1280x800 PNGs and the
-    128x128 listing icon.
+[ ] Screenshots: three 1280x800 PNGs, uploaded with the listing. They were
+    generated once; the listing keeps them.
 
     Everything for the upload is under build/ in the repo. Nothing is put
     anywhere else.
@@ -199,23 +198,26 @@ Open source, MIT licensed.
 ----
 
 SCREENSHOTS
-    Already made. Run:  make extension-screenshots
-    Output: build/store-screenshots/ - upload the three in order.
+    Three 1280x800 PNGs, already uploaded with the listing:
 
         1-faster-downloads.png   the popup, mid-download
         2-video-one-click.png    the Download button and quality menu
         3-privacy.png            what Baaz does not do
 
+    They show only our own interface - a listing is rejected for showing
+    page content whose rights are not yours, so the video in the second one
+    is a plain placeholder rather than a real site.
+
 STORE ICON
-    build/store-screenshots/store-icon-128.png  (128x128, required)
+    extension/icons/icon128.png  (128x128, required)
 
     They show only our own interface. A listing is rejected for showing page
     content whose rights are not yours, so the video is a plain placeholder
     rather than a real site.
 
-    To change the wording or layout, edit extension/store-assets/scene*.html
-    and run the command again. Scene 1 loads popup.html itself, so the popup
-    in the screenshot is always the real one.
+    The tooling that rendered them is not kept: they are uploaded once and
+    the listing holds them. Replacing them later means new ones, which is
+    the honest position anyway once the interface has moved on.
 
 
 -----------------------------------------------------------------------

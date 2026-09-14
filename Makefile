@@ -5,7 +5,7 @@ BUILD   := build
 VERSION := 0.0.0-dev
 
 .PHONY: build test install install-plugin install-chrome uninstall \
-        extension-store extension-screenshots \
+        extension-store \
         macos-app macos-dmg macos-test macos-install macos-check
 
 build:
@@ -16,9 +16,6 @@ build:
 extension-store:
 	./extension/pack-store.sh
 
-# 1280x800 listing screenshots, rendered from the real popup markup.
-extension-screenshots:
-	./extension/store-assets/render.sh $(BUILD)/store-screenshots
 
 test:
 	go test ./...
