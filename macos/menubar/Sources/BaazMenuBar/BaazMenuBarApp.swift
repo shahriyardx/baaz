@@ -10,7 +10,7 @@ struct BaazMenuBarApp: App {
     var body: some Scene {
         // The real app: a window with every download and the controls for
         // them. The menu bar item below stays the glance.
-        Window("baaz", id: "main") {
+        Window("Baaz", id: "main") {
             MainWindow()
                 .environmentObject(delegate.model)
         }

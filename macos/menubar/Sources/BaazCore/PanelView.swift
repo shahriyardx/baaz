@@ -146,7 +146,7 @@ public struct PanelView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Downloads").font(.headline)
+                Text("Baaz").font(.headline)
                 Text(model.statusLine)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -177,7 +177,7 @@ public struct PanelView: View {
 
     private var footer: some View {
         HStack {
-            TextButton(title: "Open baaz") {
+            TextButton(title: "Open Baaz") {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "main")
             }

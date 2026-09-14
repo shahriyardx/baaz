@@ -45,7 +45,7 @@ public struct MainWindow: View {
         } detail: {
             detail
         }
-        .navigationTitle("baaz")
+        .navigationTitle("Baaz")
         .navigationSubtitle(model.statusLine)
         .toolbar { toolbar }
         .searchable(text: $search, placement: .toolbar, prompt: "Filter by name")
