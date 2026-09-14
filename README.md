@@ -224,6 +224,16 @@ the full window:
   pieces at once
 - right-click a finished one to show it in Finder or delete it
 
+**Settings** live under <kbd>⌘,</kbd> (baaz → Settings…), in three tabs:
+
+- **General** — where downloads are saved, category folders, open at login
+- **Downloads** — speed limit, how many at once, parts per file, the size
+  below which Chrome keeps its own downloads
+- **Browser** — Chrome takeover on/off, and the extension folder with a
+  button to re-run the Chrome setup
+
+The gear in the menu bar panel is the same settings, kept short.
+
 Closing the window doesn't quit — downloads keep running and the falcon stays
 in the menu bar. Quit from the menu or <kbd>⌘Q</kbd>.
 

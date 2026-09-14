@@ -243,6 +243,16 @@ public final class DownloadsModel: ObservableObject {
         }
     }
 
+    /// Opens the app's Settings window (the same one as ⌘,).
+    public func openSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        // The selector was renamed in macOS 14; try the current one first.
+        let modern = Selector(("showSettingsWindow:"))
+        let legacy = Selector(("showPreferencesWindow:"))
+        if NSApp.sendAction(modern, to: nil, from: nil) { return }
+        NSApp.sendAction(legacy, to: nil, from: nil)
+    }
+
     /// Opens the configured download root in Finder.
     public func openDownloadDir() {
         let dir = resolvedDownloadDir

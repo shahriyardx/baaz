@@ -78,6 +78,32 @@ public enum Setup {
         p.waitUntilExit()
     }
 
+    /// Whether the app is registered to open at login.
+    public static var opensAtLogin: Bool {
+        SMAppService.mainApp.status == .enabled
+    }
+
+    /// Turns "open at login" on or off. Returns the state afterwards, which
+    /// may differ from what was asked if macOS refused.
+    @discardableResult
+    public static func setOpensAtLogin(_ enabled: Bool) -> Bool {
+        do {
+            if enabled { try SMAppService.mainApp.register() }
+            else { try SMAppService.mainApp.unregister() }
+        } catch {
+            NSLog("baaz: could not change the login item: \(error.localizedDescription)")
+        }
+        return opensAtLogin
+    }
+
+    /// Re-runs the Chrome wiring: manifest, per-user policy, and a fresh copy
+    /// of the extension. Safe to call repeatedly.
+    public static func rerunChromeSetup() {
+        let cli = FileManager.default.isExecutableFile(atPath: installedCLI.path)
+            ? installedCLI : (bundledCLI ?? installedCLI)
+        runCLI(cli, ["install-chrome"])
+    }
+
     /// Registers the app to open at login.
     ///
     /// SMAppService is the supported route on macOS 13+: it registers this

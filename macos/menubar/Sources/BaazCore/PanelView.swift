@@ -170,6 +170,7 @@ public struct PanelView: View {
     private var footer: some View {
         HStack {
             TextButton(title: "Open baaz") { model.openMainWindow() }
+            TextButton(title: "Settings…") { model.openSettings() }
 
             Spacer()
             TextButton(title: "Quit") { NSApplication.shared.terminate(nil) }

@@ -33,6 +33,13 @@ struct BaazMenuBarApp: App {
             }
         }
 
+        // The standard Settings scene: this is what puts "Settings…" in the
+        // app menu and binds ⌘,.
+        Settings {
+            SettingsWindow()
+                .environmentObject(delegate.model)
+        }
+
         MenuBarExtra {
             PanelView()
                 .environmentObject(delegate.model)
