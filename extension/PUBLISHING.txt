@@ -1,12 +1,100 @@
 PUBLISHING BAAZ TO THE CHROME WEB STORE
 =======================================
 
-Every field the listing asks for. Text between the ---- rules is meant to be
-copied straight into the console as it is. Anything marked [FILL IN] needs a
-decision or a URL only you have.
+Every field the listing asks for, already answered. Text between the ----
+rules is meant to be copied straight into the console as it is.
+
+Section 0 is the answer sheet: the fields the console refuses to publish
+without. The sections after it are the rest of the listing and what to do
+once the extension has an ID.
 
 Console: https://chrome.google.com/webstore/devconsole
 ($5 one-time developer registration.)
+
+
+-----------------------------------------------------------------------
+0. ANSWER SHEET
+-----------------------------------------------------------------------
+
+Every field the console refuses to publish without, in the order it lists
+them. Copy between the ---- rules. The detail behind each answer is in the
+sections below.
+
+CATEGORY
+    Tools                            (Workflow & Planning also fits)
+
+LANGUAGE
+    English (United States)
+
+SINGLE PURPOSE DESCRIPTION
+----
+Baaz hands downloads started in Chrome to the Baaz application on the same
+computer, which downloads them faster and can pause and resume them.
+----
+
+JUSTIFICATION - downloads
+----
+Baaz needs to see a download as Chrome starts it, and cancel Chrome's own
+copy once the Baaz app has taken it over. Without this the file would
+download twice.
+----
+
+JUSTIFICATION - nativeMessaging
+----
+The Baaz application runs on the user's computer and does the downloading.
+This permission is how the extension hands it the link. It is the
+extension's entire purpose.
+----
+
+JUSTIFICATION - cookies
+----
+Many downloads are behind a login. The cookies for the download's own URL
+are read and passed to the Baaz app so the file downloads as the signed-in
+user, exactly as Chrome would have. Cookies are read only for the URL being
+downloaded, are never stored, and are never sent anywhere except the app on
+the same computer.
+----
+
+JUSTIFICATION - storage
+----
+Stores one setting: whether the user has the extension switched on. Nothing
+else is kept.
+----
+
+JUSTIFICATION - host permission use
+----
+A download can start from any site, and the Download button has to be able
+to appear over a video on any site. The extension reads the page only to
+find the video's address; it does not read or transmit page content.
+----
+
+JUSTIFICATION - remote code use
+    Select "No, I am not using remote code", then paste:
+----
+Baaz does not use remote code. Every JavaScript file it executes is included
+in the package. The extension makes no network requests of its own, and
+never loads, fetches, injects or evaluates code at runtime. There is no use
+of eval, new Function, or dynamically inserted script tags anywhere in the
+extension.
+----
+
+DATA USAGE - tick exactly two
+    [x] Authentication information
+    [x] Website content
+    Everything else stays unticked.
+
+CERTIFICATIONS - tick all three, each is true
+    [x] Does not sell or transfer user data to third parties, apart from the
+        approved use cases
+    [x] Does not use or transfer user data for purposes unrelated to the
+        item's single purpose
+    [x] Does not use or transfer user data to determine creditworthiness or
+        for lending purposes
+
+PRIVACY POLICY URL
+----
+https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
+----
 
 
 -----------------------------------------------------------------------
@@ -27,8 +115,8 @@ Console: https://chrome.google.com/webstore/devconsole
     Everything for the upload is under build/ in the repo. Nothing is put
     anywhere else.
 
-[ ] Put the privacy policy at a public URL (see PRIVACY.md in the repo root)
-    and note the address in section 3.
+[ ] Privacy policy is already public:
+    https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
 
 [ ] Take at least one screenshot, 1280x800 or 640x400, PNG or JPEG.
 
@@ -193,8 +281,8 @@ CERTIFICATIONS - all three are true, tick all three
         for lending purposes.
 
 PRIVACY POLICY URL
-    [FILL IN]  A public URL for PRIVACY.md. The simplest option:
     https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
+    (PRIVACY.md in the repo root; the URL is live.)
 
 
 -----------------------------------------------------------------------
