@@ -20,6 +20,12 @@ Console: https://chrome.google.com/webstore/devconsole
     Produces build/baaz-extension-store.zip with the "key" field stripped.
     The store assigns its own ID and rejects a package carrying one.
 
+[ ] Run:  make extension-screenshots
+    Produces build/store-screenshots/ - three 1280x800 PNGs.
+
+    Everything for the upload is under build/ in the repo. Nothing is put
+    anywhere else.
+
 [ ] Put the privacy policy at a public URL (see PRIVACY.md in the repo root)
     and note the address in section 3.
 
