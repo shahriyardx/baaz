@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Baaz",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "description": "Faster downloads in Chrome \u2014 files are split into parts, and videos download with one click.",
   "background": {
     "service_worker": "background.js"

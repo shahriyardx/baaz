@@ -21,12 +21,17 @@ out="${1:-$(dirname "$here")/build/baaz-extension-store.zip}"
 
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
-cp -R "$here" "$stage/extension"
-# Only what the extension actually runs. Documentation and tooling that lives
-# alongside the source would otherwise be shipped to every user, and counts
-# against the review as unused files.
-rm -f "$stage/extension/pack-store.sh"
-find "$stage/extension" \( -name '*.md' -o -name '*.txt' -o -name '.DS_Store' \) -delete
+mkdir -p "$stage/extension"
+
+# A whitelist, not a blacklist. The extension directory also holds the
+# publishing notes and the screenshot tooling, and a blacklist quietly ships
+# whatever gets added next — an earlier build put store-assets/, including a
+# .swift file, inside the upload.
+for item in manifest.json background.js content.js popup.html popup.js icons; do
+  [ -e "$here/$item" ] || { echo "pack-store: missing $item"; exit 1; }
+  cp -R "$here/$item" "$stage/extension/"
+done
+find "$stage/extension" -name '.DS_Store' -delete
 
 python3 - "$stage/extension/manifest.json" <<'PY'
 import json, sys, collections

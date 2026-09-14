@@ -35,7 +35,13 @@ jobs:
         # the binary embeds — extension/ is the single source.
         run: |
           rm -rf baaz-extension
-          cp -r extension baaz-extension
+          mkdir -p baaz-extension
+          # Only what the extension runs. extension/ also holds the publishing
+          # notes and the screenshot tooling, which have no business in a
+          # package someone might load into their browser.
+          for item in manifest.json background.js content.js popup.html popup.js icons; do
+            cp -R "extension/$item" baaz-extension/
+          done
           zip -qr baaz-extension.zip baaz-extension
           rm -rf baaz-extension
       - name: Upload binaries
