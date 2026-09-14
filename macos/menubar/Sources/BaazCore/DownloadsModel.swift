@@ -8,6 +8,32 @@ import Foundation
 /// also auto-starts the daemon, so the UI never polls — it renders whatever
 /// the last snapshot said. If the process dies (daemon killed, binary gone) a
 /// timer restarts it after a pause, so a missing binary cannot spin the CPU.
+/// Which downloads the main window is showing.
+public enum JobFilter: String, CaseIterable, Identifiable {
+    case all, active, paused, done, failed
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .all: return "All"
+        case .active: return "Downloading"
+        case .paused: return "Paused"
+        case .done: return "Completed"
+        case .failed: return "Failed"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .all: return "tray.full"
+        case .active: return "arrow.down.circle"
+        case .paused: return "pause.circle"
+        case .done: return "checkmark.circle"
+        case .failed: return "exclamationmark.triangle"
+        }
+    }
+}
+
 @MainActor
 public final class DownloadsModel: ObservableObject {
     public init() {}
@@ -135,6 +161,42 @@ public final class DownloadsModel: ObservableObject {
 
     // MARK: - Actions
 
+    /// Queues a URL. The daemon does the detecting: it probes for Range
+    /// support, works out the filename and size, and routes media pages to
+    /// yt-dlp — so the UI only has to hand over the link.
+    func add(url: String, filename: String = "", format: String = "") {
+        let url = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return }
+        var args = ["add"]
+        if !filename.isEmpty { args += ["--out", filename] }
+        if !format.isEmpty { args += ["--format", format] }
+        args.append(url)
+        BaazCLI.run(args)
+    }
+
+    /// Everything, newest first, with the live jobs above finished ones.
+    var allJobs: [Job] { jobs + recent }
+
+    func jobs(matching filter: JobFilter) -> [Job] {
+        switch filter {
+        case .all: return allJobs
+        case .active: return jobs.filter { $0.isActive || $0.state == "queued" }
+        case .paused: return jobs.filter { $0.state == "paused" }
+        case .done: return recent
+        case .failed: return jobs.filter(\.isFailed)
+        }
+    }
+
+    func count(_ filter: JobFilter) -> Int { jobs(matching: filter).count }
+
+    public func pauseAll() {
+        for j in jobs where j.isActive { act("pause", j.id) }
+    }
+
+    public func resumeAll() {
+        for j in jobs where j.state == "paused" || j.isFailed { act("resume", j.id) }
+    }
+
     func act(_ verb: String, _ id: String) {
         BaazCLI.run(id.isEmpty ? [verb] : [verb, id])
     }
@@ -169,8 +231,20 @@ public final class DownloadsModel: ObservableObject {
         return FileManager.default.homeDirectoryForCurrentUser.path + String(dir.dropFirst())
     }
 
+    /// Brings the main window forward, reopening it if it was closed.
+    public func openMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        // The window may be closed rather than merely hidden; this is the
+        // same path the Dock icon uses to bring it back.
+        NSApp.sendAction(Selector(("showMainWindow:")), to: nil, from: nil)
+        for w in NSApp.windows where w.canBecomeMain {
+            w.makeKeyAndOrderFront(nil)
+            return
+        }
+    }
+
     /// Opens the configured download root in Finder.
-    func openDownloadDir() {
+    public func openDownloadDir() {
         let dir = resolvedDownloadDir
         guard !dir.isEmpty else { return }
         NSWorkspace.shared.open(URL(fileURLWithPath: dir))

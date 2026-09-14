@@ -7,6 +7,32 @@ struct BaazMenuBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
+        // The real app: a window with every download and the controls for
+        // them. The menu bar item below stays the glance.
+        Window("baaz", id: "main") {
+            MainWindow()
+                .environmentObject(delegate.model)
+        }
+        .defaultSize(width: 900, height: 560)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Download…") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    NotificationCenter.default.post(name: .baazAddDownload, object: nil)
+                }
+                .keyboardShortcut("n")
+            }
+            CommandGroup(after: .newItem) {
+                Button("Pause All") { delegate.model.pauseAll() }
+                    .keyboardShortcut(".", modifiers: [.command])
+                Button("Resume All") { delegate.model.resumeAll() }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                Divider()
+                Button("Open Downloads Folder") { delegate.model.openDownloadDir() }
+                    .keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+        }
+
         MenuBarExtra {
             PanelView()
                 .environmentObject(delegate.model)
@@ -88,6 +114,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         model.stop()
+    }
+
+    /// Closing the window is not quitting: the menu bar item is still there
+    /// and downloads keep running. Quit is explicit, from the menu or ⌘Q.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    /// Clicking the Dock icon with no window open brings it back, which is
+    /// what every other Mac app does.
+    func applicationShouldHandleReopen(_ sender: NSApplication,
+                                       hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { model.openMainWindow() }
+        return true
     }
 
     /// `install-menubar` registers a login item that launchd starts, so a

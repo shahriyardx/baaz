@@ -61,8 +61,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 	<key>CFBundleIconFile</key><string>Baaz</string>
 	<key>LSMinimumSystemVersion</key><string>13.0</string>
 	<key>NSHighResolutionCapable</key><true/>
-	<!-- Menu bar only: no Dock tile, no app switcher entry, no main window. -->
-	<key>LSUIElement</key><true/>
+	<!-- A normal app: Dock tile, app switcher, main window. The menu bar
+	     item is in addition to that, not instead of it. -->
 </dict>
 </plist>
 PLIST

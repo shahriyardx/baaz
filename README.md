@@ -10,6 +10,8 @@ TikTok and more with one click.
 - **Video download button** — hover any video on YouTube, Facebook, etc. and click Download; pick a quality or audio-only mp3
 - **Tidy folders** — files sort themselves into Videos, Music, Documents, Programs and so on inside your Downloads folder
 - **Desktop notifications** — know when a download starts, finishes, or fails
+- **A real app on macOS** — a window with every download, add links by hand,
+  pause and resume anything, watch the parts arrive
 - **Always-visible widget** — live speed and progress in your Omarchy bar (Linux)
   or your menu bar (macOS), no window to open
 
@@ -206,6 +208,24 @@ You mostly don't have to do anything:
 - **Turn baaz off**: click the widget → flip the switch at the top —
   Chrome goes back to downloading by itself. Flip it again to return.
   (The extension icon in Chrome shows the same on/off state.)
+
+## The app (macOS)
+
+Open Baaz from the Dock — or click the falcon and choose **Open baaz** — for
+the full window:
+
+- every download in one list, filtered by **Downloading / Paused / Completed /
+  Failed**, with a search box
+- **＋** or <kbd>⌘N</kbd> to add a link. The URL is filled in from your
+  clipboard if you just copied one, and video pages get a quality picker
+- pause, resume and cancel per download, or **Pause All** / **Resume All**
+  (<kbd>⌘.</kbd> and <kbd>⇧⌘R</kbd>)
+- click **parts** on a running download to watch the file arrive in up to 8
+  pieces at once
+- right-click a finished one to show it in Finder or delete it
+
+Closing the window doesn't quit — downloads keep running and the falcon stays
+in the menu bar. Quit from the menu or <kbd>⌘Q</kbd>.
 
 ## Where do my files go?
 

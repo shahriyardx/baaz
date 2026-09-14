@@ -169,8 +169,7 @@ public struct PanelView: View {
 
     private var footer: some View {
         HStack {
-            TextButton(title: "Open Downloads") { model.openDownloadDir() }
-                .disabled(model.settings.downloadDir.isEmpty)
+            TextButton(title: "Open baaz") { model.openMainWindow() }
 
             Spacer()
             TextButton(title: "Quit") { NSApplication.shared.terminate(nil) }
