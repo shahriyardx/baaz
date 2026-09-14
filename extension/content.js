@@ -22,8 +22,13 @@
     "dailymotion.com", "soundcloud.com",
   ];
 
+  // 4K and 1440p are VP9 or AV1 — YouTube publishes no H.264 that large — so
+  // they are flagged rather than left to surprise someone whose player
+  // cannot decode them. "Best" stays H.264, which plays anywhere.
   const QUALITIES = [
-    { key: "best", label: "Best quality" },
+    { key: "best", label: "Best · plays anywhere" },
+    { key: "2160", label: "4K · needs VLC" },
+    { key: "1440", label: "1440p · needs VLC" },
     { key: "1080", label: "1080p" },
     { key: "720", label: "720p" },
     { key: "480", label: "480p" },

@@ -45,7 +45,9 @@ public struct AddDownloadSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Quality").font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $format) {
-                        Text("Best available").tag("best")
+                        Text("Best — plays anywhere").tag("best")
+                        Text("4K — needs VLC").tag("2160")
+                        Text("1440p — needs VLC").tag("1440")
                         Text("1080p").tag("1080")
                         Text("720p").tag("720")
                         Text("480p").tag("480")
@@ -53,7 +55,7 @@ public struct AddDownloadSheet: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
-                    Text("This looks like a video page, so it downloads with yt-dlp.")
+                    Text("Above 1080p YouTube offers only VP9 and AV1, which QuickTime cannot play. Anything up to 1080p is H.264 and opens anywhere.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

@@ -166,6 +166,9 @@ You mostly don't have to do anything:
 - **Videos**: move your mouse over a video on YouTube, Facebook, TikTok,
   Instagram, X or Vimeo. A **Download** button appears on the video. Click
   it, pick a quality (or "Audio only" for mp3), done.
+  Up to 1080p you get H.264, which every player opens. 4K and 1440p exist on
+  YouTube only as VP9 and AV1, so those are offered separately and marked —
+  QuickTime cannot play them, VLC can.
 - **Watch progress**: on Omarchy look at your bar, on macOS look at the menu
   bar near the clock — it shows speed and percent while anything downloads.
   Click it for the full list with pause, resume, and cancel buttons. Click a
@@ -342,7 +345,7 @@ parsed into the same job accounting.
 CLI:
 
 ```
-baaz add URL [--out NAME] [--format best|1080|720|480|audio]
+baaz add URL [--out NAME] [--format best|2160|1440|1080|720|480|audio]
 baaz ls | status [--json] | watch
 baaz pause|resume|cancel|delete ID
 baaz clear

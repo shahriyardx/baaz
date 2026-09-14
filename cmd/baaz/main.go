@@ -149,7 +149,7 @@ func dial() (*ipc.Client, error) {
 func cmdAdd(args []string) error {
 	fs := flag.NewFlagSet("add", flag.ExitOnError)
 	out := fs.String("out", "", "output filename")
-	format := fs.String("format", "", "media quality: best|1080|720|480|audio")
+	format := fs.String("format", "", "media quality: best|2160|1440|1080|720|480|audio")
 	fs.Parse(args)
 	if fs.NArg() != 1 {
 		return fmt.Errorf("usage: baaz add URL [--out NAME] [--format QUALITY]")

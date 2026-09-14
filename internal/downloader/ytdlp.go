@@ -265,14 +265,35 @@ func fileExists(p string) bool {
 // sorting rather than a height filter: "res" is the smaller dimension, so
 // vertical videos (reels: 720x1280) work, and sorting always picks the
 // closest available format instead of erroring like a strict -f filter.
+// formatArgs turns a quality preset into yt-dlp arguments.
+//
+// Left to itself, yt-dlp takes the highest-quality streams, which on YouTube
+// means VP9 or AV1 in a .webm container — a file QuickTime, Preview, iMovie
+// and iOS all refuse. So the default asks for H.264 with AAC, the
+// combination every player handles, merged into an mp4.
+//
+// That caps the default at 1080p, because YouTube publishes no H.264 above
+// it. Rather than quietly hand back a 4K file that will not open, the higher
+// resolutions are their own presets: choosing 1440p or 2160p is choosing
+// VP9 or AV1, and the menu says so.
 func formatArgs(preset string) []string {
+	// Sorted after resolution, so it only decides between streams of the
+	// same size — a preference, never a cap on what the user asked for.
+	const playable = "vcodec:h264,acodec:aac"
+
 	switch preset {
-	case "1080", "720", "480":
-		return []string{"-S", "res:" + preset}
+	case "2160", "1440", "1080", "720", "480":
+		return []string{
+			"-S", "res:" + preset + "," + playable,
+			"--merge-output-format", "mp4",
+		}
 	case "audio":
 		return []string{"-f", "bestaudio/b", "-x", "--audio-format", "mp3"}
 	default: // "", "best"
-		return nil
+		return []string{
+			"-S", playable,
+			"--merge-output-format", "mp4",
+		}
 	}
 }
 
