@@ -60,6 +60,8 @@ Panel {
   }
 
   function jobCaption(j) {
+    // A note outranks the usual caption: it says why nothing is moving yet.
+    if (j.note) return j.note
     if (j.state === "active") {
       if (j.total <= 0) // server sent no size: only bytes-so-far is knowable
         return human(j.done) + " · " + human(j.speed) + "/s · size unknown"

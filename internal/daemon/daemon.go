@@ -57,6 +57,7 @@ func NewManager(cfg *config.Config) *Manager {
 	}
 	m.eng = downloader.NewEngine(cfg.Segments, cfg.MinSplitSize)
 	m.eng.Limiter.SetRate(int64(cfg.SpeedLimitKB) << 10)
+	m.eng.ToolsDir = filepath.Join(config.DataDir(), "bin")
 	m.eng.OnProgress = func(j *downloader.Job) { m.persistThrottled(j) }
 
 	// Crash recovery: anything found mid-flight becomes paused; user resumes.
@@ -504,6 +505,7 @@ func (m *Manager) jobInfo(j *downloader.Job, state downloader.State) ipc.JobInfo
 	if info.Name == "" {
 		info.Name = j.URL
 	}
+	info.Note = j.Note()
 	info.URL = j.URL
 	info.Kind = j.Kind
 	info.NoRange = j.NoRange

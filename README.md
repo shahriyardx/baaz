@@ -109,10 +109,11 @@ Without it everything else still works for you.
 
 That's it. From now on, when you download something in Chrome, baaz takes it.
 
-**Optional — video downloads from YouTube etc.** need yt-dlp (and ffmpeg, to
-join the video and audio tracks). The installer notices if they are missing
-and offers to install them; say no and everything except video downloads
-still works. To do it yourself:
+**Video downloads from YouTube etc.** need yt-dlp and ffmpeg. On **macOS**
+baaz fetches both itself the first time you download a video — nothing to
+install, the first one just takes a little longer while it does. On Linux,
+use your package manager (the installer offers to, and a video download that
+finds them missing says exactly what to run):
 
 ```
 sudo pacman -S yt-dlp ffmpeg        # Arch / Omarchy
@@ -286,7 +287,7 @@ The switch next to the gear turns Chrome takeover on/off entirely.
 | Problem | Fix |
 |---|---|
 | Extension popup says "daemon offline" | Run any baaz command once (e.g. `baaz ls`) — it starts itself. Then reopen the popup. |
-| Video downloads fail | Install `yt-dlp` (see above). On macOS that means `brew install yt-dlp ffmpeg` — baaz looks in Homebrew's and MacPorts' directories itself, so you do not have to fix its PATH. |
+| Video downloads fail | Linux: install `yt-dlp` and `ffmpeg`. macOS: baaz fetches them itself, so this usually means it could not reach GitHub — check the network and retry the download. An existing Homebrew or MacPorts copy is used as-is. |
 | A download is stuck | Widget → pause it, then resume. It continues from where it stopped. |
 | I want a file AND its list entry gone | Hover the entry in the widget → trash icon. "Clear all" only empties the list, files stay. |
 | Chrome still shows its own save dialog | Run `sudo baaz install-chrome` again, then `chrome://restart`. |

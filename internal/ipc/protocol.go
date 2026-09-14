@@ -55,6 +55,9 @@ type JobInfo struct {
 	Dir   string `json:"dir"`
 	Error string `json:"error,omitempty"`
 
+	// Note is a transient status line, e.g. while yt-dlp is being fetched.
+	Note string `json:"note,omitempty"`
+
 	// Detail for an inspector; absent on older daemons.
 	URL         string `json:"url,omitempty"`
 	Kind        string `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp

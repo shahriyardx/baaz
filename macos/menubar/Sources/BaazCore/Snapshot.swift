@@ -57,6 +57,7 @@ struct Job: Codable, Equatable, Identifiable {
     var eta: Int64 = -1
     var dir = ""
     var error = ""
+    var note = ""   // transient status, e.g. while yt-dlp is being fetched
     var url = ""
     var kind = ""       // "" = direct download, "media" = yt-dlp
     var noRange = false // the server refused to split it
@@ -76,6 +77,7 @@ struct Job: Codable, Equatable, Identifiable {
         dir = try c.decodeIfPresent(String.self, forKey: .dir) ?? ""
         error = try c.decodeIfPresent(String.self, forKey: .error) ?? ""
         segments = try c.decodeIfPresent([JobSegment].self, forKey: .segments) ?? []
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
         url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? ""
         noRange = try c.decodeIfPresent(Bool.self, forKey: .noRange) ?? false
@@ -112,6 +114,7 @@ struct Job: Codable, Equatable, Identifiable {
     }
 
     var caption: String {
+        if !note.isEmpty { return note }
         switch state {
         case "active":
             guard total > 0 else {

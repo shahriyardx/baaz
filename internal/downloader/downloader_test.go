@@ -153,7 +153,7 @@ func TestPauseResume(t *testing.T) {
 }
 
 func TestNameCollision(t *testing.T) {
-	data := testPayload(t, 10 << 10)
+	data := testPayload(t, 10<<10)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeContent(w, r, "dup.bin", time.Time{}, bytes.NewReader(data))
 	}))

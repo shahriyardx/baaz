@@ -58,23 +58,32 @@ var (
 // into (notably Homebrew's /opt/homebrew/bin on Apple Silicon). Falling back
 // to the known locations is what stops "yt-dlp is not installed" from being
 // reported on a machine where it plainly is.
-func lookupYtdlp() (string, error) {
-	if p, err := exec.LookPath("yt-dlp"); err == nil {
+func (e *Engine) lookupTool(name string) (string, error) {
+	if p, err := exec.LookPath(name); err == nil {
 		return p, nil
 	}
-	for _, dir := range ytdlpBinDirs {
-		p := filepath.Join(dir, "yt-dlp")
+	for _, dir := range e.toolDirs() {
+		p := filepath.Join(dir, name)
 		if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
 			return p, nil
 		}
 	}
-	return "", fmt.Errorf("yt-dlp is not installed (%s)", ytdlpInstallHint)
+	return "", fmt.Errorf("%s is not installed (%s)", name, ytdlpInstallHint)
+}
+
+// toolDirs is where to look besides PATH: baaz's own directory first, then
+// the package managers'.
+func (e *Engine) toolDirs() []string {
+	if e.ToolsDir == "" {
+		return ytdlpBinDirs
+	}
+	return append([]string{e.ToolsDir}, ytdlpBinDirs...)
 }
 
 // ytdlpEnv adds those same directories to the child's PATH, because yt-dlp
 // looks up ffmpeg itself and would otherwise fail to merge video with audio
 // on exactly the machines described above.
-func ytdlpEnv() []string {
+func (e *Engine) ytdlpEnv() []string {
 	env := os.Environ()
 	seen := map[string]bool{}
 	var parts []string
@@ -84,7 +93,7 @@ func ytdlpEnv() []string {
 			parts = append(parts, dir)
 		}
 	}
-	for _, dir := range ytdlpBinDirs {
+	for _, dir := range e.toolDirs() {
 		if !seen[dir] {
 			seen[dir] = true
 			parts = append(parts, dir)
@@ -103,7 +112,15 @@ func ytdlpEnv() []string {
 // runYtdlp delegates a media-page URL to yt-dlp, translating its progress
 // lines into the job's normal accounting. `-c` makes kill-and-rerun resume.
 func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
-	bin, err := lookupYtdlp()
+	// Fetch yt-dlp and ffmpeg if this platform provisions them and they are
+	// missing. Clearing the note matters: it is shown to the user.
+	if err := e.ensureMediaTools(ctx, j.SetNote); err != nil {
+		j.SetNote("")
+		return err
+	}
+	j.SetNote("")
+
+	bin, err := e.lookupTool("yt-dlp")
 	if err != nil {
 		return err
 	}
@@ -148,7 +165,7 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	args = append(args, formatArgs(j.Format)...)
 	args = append(args, j.URL)
 	cmd := exec.CommandContext(ctx, bin, args...)
-	cmd.Env = ytdlpEnv()
+	cmd.Env = e.ytdlpEnv()
 	cmd.Stderr = os.Stderr // ends up in the daemon log
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

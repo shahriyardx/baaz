@@ -12,7 +12,8 @@ import (
 // package-manager directories have to survive into the child.
 func TestYtdlpEnvAddsBinDirs(t *testing.T) {
 	t.Setenv("PATH", "/usr/bin")
-	env := ytdlpEnv()
+	e := &Engine{}
+	env := e.ytdlpEnv()
 
 	var path string
 	var count int
@@ -38,7 +39,8 @@ func TestYtdlpEnvAddsBinDirs(t *testing.T) {
 
 func TestYtdlpEnvDoesNotDuplicate(t *testing.T) {
 	t.Setenv("PATH", strings.Join(ytdlpBinDirs, string(filepath.ListSeparator)))
-	for _, kv := range ytdlpEnv() {
+	e := &Engine{}
+	for _, kv := range e.ytdlpEnv() {
 		if !strings.HasPrefix(kv, "PATH=") {
 			continue
 		}
@@ -56,7 +58,8 @@ func TestYtdlpEnvDoesNotDuplicate(t *testing.T) {
 // A missing yt-dlp must name the right package manager for the platform.
 func TestLookupYtdlpErrorMentionsPlatformHint(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	if _, err := lookupYtdlp(); err != nil {
+	e := &Engine{}
+	if _, err := e.lookupTool("yt-dlp"); err != nil {
 		if !strings.Contains(err.Error(), ytdlpInstallHint) {
 			t.Errorf("error %q does not carry the install hint %q", err, ytdlpInstallHint)
 		}
@@ -78,7 +81,8 @@ func TestLookupYtdlpFindsBinaryOutsidePath(t *testing.T) {
 	defer func() { ytdlpBinDirs = old }()
 
 	t.Setenv("PATH", t.TempDir()) // empty: forces the fallback
-	got, err := lookupYtdlp()
+	e := &Engine{}
+	got, err := e.lookupTool("yt-dlp")
 	if err != nil {
 		t.Fatalf("expected the fallback to find %s, got %v", fake, err)
 	}

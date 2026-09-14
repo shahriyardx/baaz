@@ -50,15 +50,16 @@ type Job struct {
 	CreatedAt   time.Time         `json:"createdAt"`
 	CompletedAt *time.Time        `json:"completedAt,omitempty"`
 	FinalPath   string            `json:"finalPath,omitempty"`
-	NoRange     bool              `json:"noRange,omitempty"` // single-stream job (no usable Range support)
-	Kind        string            `json:"kind,omitempty"`    // "" = http, "media" = yt-dlp
-	Format      string            `json:"format,omitempty"`  // media preset: best|1080|720|480|audio
+	NoRange     bool              `json:"noRange,omitempty"`    // single-stream job (no usable Range support)
+	Kind        string            `json:"kind,omitempty"`       // "" = http, "media" = yt-dlp
+	Format      string            `json:"format,omitempty"`     // media preset: best|1080|720|480|audio
 	Categorize  bool              `json:"categorize,omitempty"` // sort into <dir>/baaz/<Category>
 
 	mu        sync.Mutex
 	cancel    context.CancelFunc
 	softPause atomic.Bool // pause by not reading; connection stays open
 	limiter   *Limiter    // shared throughput cap; nil means unlimited
+	note      string      // transient status, e.g. while fetching yt-dlp
 }
 
 // SetSoftPause suspends/continues a running single-stream transfer without
@@ -105,6 +106,19 @@ func (j *Job) SegmentProgress() []SegmentStat {
 	return out
 }
 
+// SetNote records a transient status for the UI; "" clears it.
+func (j *Job) SetNote(s string) {
+	j.mu.Lock()
+	j.note = s
+	j.mu.Unlock()
+}
+
+func (j *Job) Note() string {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.note
+}
+
 func (j *Job) GetState() State {
 	j.mu.Lock()
 	defer j.mu.Unlock()
@@ -146,6 +160,9 @@ type Engine struct {
 	// Limiter caps total throughput across every segment of every job. Nil
 	// or a zero rate means unlimited.
 	Limiter *Limiter
+	// ToolsDir is where yt-dlp and ffmpeg are kept when baaz provisions them
+	// itself. Empty disables that and leaves it to PATH.
+	ToolsDir string
 	// OnProgress, if set, is invoked roughly once per second from the running
 	// job so the caller can persist state.
 	OnProgress func(*Job)
@@ -153,7 +170,7 @@ type Engine struct {
 
 func NewEngine(segments int, minSplit int64) *Engine {
 	return &Engine{
-		Limiter:      NewLimiter(0), // unlimited until configured
+		Limiter: NewLimiter(0), // unlimited until configured
 		Client: &http.Client{
 			// No overall timeout: downloads are long-lived. Dial/TLS timeouts
 			// come from DefaultTransport.
