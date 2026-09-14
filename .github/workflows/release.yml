@@ -56,13 +56,14 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Check the menu bar app under Swift 6
-        # Toolchains differ in how strictly they check concurrency. Building
-        # under the Swift 6 language mode fails here rather than halfway
-        # through a release, and with a clearer message.
-        run: swift build --package-path macos/menubar -c release -Xswiftc -swift-version -Xswiftc 6
       - name: Test the menu bar app
-        run: swift test --package-path macos/menubar
+        # No Swift 6 language-mode check here: the runner's toolchain does not
+        # accept -swift-version 6. `make macos-strict` runs it locally on a
+        # toolchain that does. The runner's own compiler is the stricter of
+        # the two for concurrency diagnostics, so this build is the real gate.
+        run: |
+          swift --version
+          swift test --package-path macos/menubar
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"

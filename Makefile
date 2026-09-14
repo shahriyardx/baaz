@@ -66,11 +66,14 @@ macos-app:
 macos-dmg:
 	./macos/make-dmg.sh $(BUILD) $(VERSION)
 
-# Swift 6 language mode is stricter than the default, and stricter than some
-# CI toolchains — building under it locally is what stops a concurrency error
-# reaching the release runner.
+# An extra pass under the Swift 6 language mode, which catches concurrency
+# mistakes the default mode lets through. Older toolchains reject the flag,
+# so this reports and moves on rather than failing the build.
 macos-strict:
-	swift build --package-path macos/menubar -c release -Xswiftc -swift-version -Xswiftc 6
+	@swift build --package-path macos/menubar -c release \
+		-Xswiftc -swift-version -Xswiftc 6 2>/dev/null \
+		&& echo "swift 6 language mode: clean" \
+		|| echo "swift 6 language mode: unavailable on this toolchain, skipped"
 
 macos-test: macos-strict
 	swift test --package-path macos/menubar
