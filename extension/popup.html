@@ -96,6 +96,22 @@
     border-radius: 10px; font-size: 12px;
   }
   .live.show { display: flex; }
+
+  .getapp {
+    display: none; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 11px 12px;
+    background: color-mix(in srgb, var(--bad) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bad) 24%, transparent);
+    border-radius: 10px;
+    color: inherit; text-decoration: none;
+    transition: background .15s;
+  }
+  .getapp.show { display: flex; }
+  .getapp:hover { background: color-mix(in srgb, var(--bad) 15%, transparent); }
+  .getapp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .getapp strong { font-size: 12.5px; font-weight: 600; }
+  .getapp span { font-size: 11.5px; color: var(--muted); }
+  .getapp svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
   .live .count { font-weight: 650; font-variant-numeric: tabular-nums; }
   .live .arrow { width: 13px; height: 13px; color: var(--accent); flex: none; }
 
@@ -119,13 +135,27 @@
   <div class="card">
     <div class="text">
       <div class="label">Take over downloads</div>
-      <div class="sub" id="cardSub">Chrome hands files to baaz</div>
+      <div class="sub" id="cardSub">Chrome hands files to Baaz</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="enabled" aria-label="Take over downloads">
       <span class="slider"></span>
     </label>
   </div>
+
+  <!-- Someone can install this from the store without the app. Say so, and
+       give them somewhere to go, instead of a dead "not running". -->
+  <a class="getapp" id="getapp"
+     href="https://github.com/shahriyardx/baaz#install" target="_blank" rel="noopener">
+    <span class="getapp-text">
+      <strong>Baaz app not found</strong>
+      <span>The extension needs the free app to do the downloading.</span>
+    </span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M7 17 17 7"/><path d="M8 7h9v9"/>
+    </svg>
+  </a>
 
   <div class="live" id="live">
     <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"

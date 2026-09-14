@@ -8,6 +8,7 @@ const els = {
   count: document.getElementById("activeCount"),
   cardSub: document.getElementById("cardSub"),
   version: document.getElementById("version"),
+  getapp: document.getElementById("getapp"),
 };
 
 els.version.textContent = "v" + chrome.runtime.getManifest().version;
@@ -24,7 +25,7 @@ els.enabled.addEventListener("change", () => {
 
 function reflectSwitch(on) {
   els.cardSub.textContent = on
-    ? "Chrome hands files to baaz"
+    ? "Chrome hands files to Baaz"
     : "Chrome downloads normally";
 }
 
@@ -35,7 +36,10 @@ function setStatus(kind, text) {
 
 chrome.runtime.sendNativeMessage("com.shahriyar.baaz", { type: "ping" }, (reply) => {
   if (chrome.runtime.lastError || !reply || !reply.ok) {
-    setStatus("down", "app not running");
+    // Installed from the store without the app, or the app is not running.
+    // Either way, point somewhere useful rather than just reporting it.
+    setStatus("down", "not connected");
+    els.getapp.classList.add("show");
     return;
   }
   const n = reply.active || 0;
