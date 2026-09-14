@@ -12,9 +12,7 @@ struct SettingsView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            HStack {
-                Text("Sort into category folders").font(.callout)
-                Spacer()
+            SettingRow("Sort into category folders") {
                 Toggle("", isOn: Binding(
                     get: { model.settings.categorize },
                     set: { _ in model.toggleCategorize() }
@@ -28,9 +26,8 @@ struct SettingsView: View {
                        value: model.settings.maxActive, range: 1...10, step: 1)
             StepperRow(label: "Segments per file", key: "segments",
                        value: model.settings.segments, range: 1...16, step: 1)
-            HStack {
-                Text("Speed limit").font(.callout)
-                Spacer()
+
+            SettingRow("Speed limit") {
                 Picker("", selection: Binding(
                     get: { model.settings.speedLimitKB },
                     set: { model.setConfig("speed-limit", String($0)) }
@@ -50,7 +47,7 @@ struct SettingsView: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .frame(width: 130)
+                .controlSize(.small)
             }
 
             StepperRow(label: "Min size to grab", key: "min-size",
@@ -76,6 +73,36 @@ struct SettingsView: View {
     }
 }
 
+/// One settings line: label on the left, control in a fixed column on the
+/// right. The fixed width is what keeps the switch, the steppers and the
+/// pop-up button on a single edge instead of each ending wherever its own
+/// intrinsic width happens to fall.
+struct SettingRow<Control: View>: View {
+    let label: String
+    let control: Control
+
+    /// Wide enough for the pop-up button's longest preset; everything else
+    /// is right-aligned within it.
+    static var controlWidth: CGFloat { 116 }
+
+    init(_ label: String, @ViewBuilder control: () -> Control) {
+        self.label = label
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.callout)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 4)
+            control
+                .frame(width: Self.controlWidth, alignment: .trailing)
+        }
+    }
+}
+
 struct StepperRow: View {
     @EnvironmentObject var model: DownloadsModel
     let label: String
@@ -86,14 +113,16 @@ struct StepperRow: View {
     var unit: String = ""
 
     var body: some View {
-        HStack {
-            Text(label).font(.callout)
-            Spacer()
-            Text("\(value)\(unit)")
-                .font(.callout.monospacedDigit())
-                .foregroundStyle(.secondary)
-            Stepper("") { bump(step) } onDecrement: { bump(-step) }
-                .labelsHidden()
+        SettingRow(label) {
+            HStack(spacing: 6) {
+                Spacer(minLength: 0)
+                Text("\(value)\(unit)")
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Stepper("") { bump(step) } onDecrement: { bump(-step) }
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
         }
     }
 
