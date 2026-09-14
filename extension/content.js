@@ -25,10 +25,6 @@
   // Built from what the video actually offers, not a fixed list: showing 4K
   // on a 720p clip promises a download that cannot happen. The daemon asks
   // yt-dlp and the menu is rebuilt from the answer.
-  const BASE_QUALITIES = [
-    { key: "best", label: "Best · plays anywhere" },
-    { key: "audio", label: "Audio only · mp3" },
-  ];
 
   // Above 1080p YouTube has only VP9 and AV1, which QuickTime cannot play.
   function labelFor(height) {
@@ -37,8 +33,27 @@
     return height + "p";
   }
 
-  // Worth offering as a choice; the rest are too small to be useful.
-  const OFFERED = [2160, 1440, 1080, 720, 480];
+  // Built from the heights the video reports, not a list of expected ones:
+  // YouTube's ladder is 2160/1440/1080/720/480, Facebook's is more often
+  // 1080/720/540/360, and hardcoding either leaves the other with an empty
+  // menu. Anything under 240p is a thumbnail strip, not a choice.
+  function qualitiesFor(heights) {
+    if (!heights || !heights.length) return null;
+    const usable = heights.filter((h) => h >= 240).slice(0, 6);
+    if (!usable.length) return null;
+    return [
+      { key: "best", label: "Best · plays anywhere" },
+      ...usable.map((h) => ({ key: String(h), label: labelFor(h) })),
+      { key: "audio", label: "Audio only · mp3" },
+    ];
+  }
+
+  // Sites that expose no resolutions still download fine — yt-dlp picks the
+  // best stream itself.
+  const ONLY_BEST = [
+    { key: "best", label: "Best quality" },
+    { key: "audio", label: "Audio only · mp3" },
+  ];
 
   const FALLBACK_QUALITIES = [
     { key: "best", label: "Best · plays anywhere" },
@@ -47,16 +62,6 @@
     { key: "480", label: "480p" },
     { key: "audio", label: "Audio only · mp3" },
   ];
-
-  function qualitiesFor(heights) {
-    if (!heights || !heights.length) return null;
-    const items = [BASE_QUALITIES[0]];
-    for (const h of OFFERED) {
-      if (heights.includes(h)) items.push({ key: String(h), label: labelFor(h) });
-    }
-    items.push(BASE_QUALITIES[1]);
-    return items;
-  }
 
   const ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>`;
 
@@ -231,21 +236,47 @@
 
   // Asked once per video. A failure falls back to the fixed list rather than
   // leaving the menu empty — a slow answer should not cost the download.
-  let formatsFor = null;
+  // Answers are cached per URL. The first version tracked only the most
+  // recent request, so a hover moving between videos orphaned the reply in
+  // flight — and because it also refused to ask twice for the same URL, the
+  // menu stayed on "Checking qualities…" for good.
+  const formatsCache = new Map();
+  const formatsPending = new Set();
+
+  function menuItemsFor(url) {
+    const heights = formatsCache.get(url);
+    if (heights === undefined) return null;   // still asking
+    if (heights === null) return FALLBACK_QUALITIES; // lookup failed: guess
+    // Answered, but with no resolutions to choose between. Facebook is the
+    // common case: its formats are named "sd" and "hd" and carry no height
+    // at all. Offering 1080p there would promise something that does not
+    // exist, which is the whole bug this set out to fix.
+    return qualitiesFor(heights) || ONLY_BEST;
+  }
+
   function loadFormats(url) {
-    if (formatsFor === url) return;
-    formatsFor = url;
-    renderMenu(null);
+    if (!url || formatsCache.has(url) || formatsPending.has(url)) return;
+    formatsPending.add(url);
     chrome.runtime.sendMessage({ type: "baaz-formats", url }, (reply) => {
-      if (formatsFor !== url) return; // the user moved on
-      const items = (reply && reply.ok && qualitiesFor(reply.heights))
-        || FALLBACK_QUALITIES;
-      renderMenu(items);
+      formatsPending.delete(url);
+      // An unreachable daemon or an unreadable link both land here; caching
+      // an empty list means the fallback menu is shown rather than nothing.
+      // null distinguishes a failed lookup from one that succeeded with
+      // nothing to offer; the two deserve different menus.
+      formatsCache.set(url, reply && reply.ok ? (reply.heights || []) : null);
+      // Only redraw if this is still the video under the cursor.
+      if (pageMode && pageURL === url && menu && menu.style.display !== "none") {
+        renderMenu(menuItemsFor(url));
+      }
     });
   }
 
   function toggleMenu() {
-    menu.style.display = menu.style.display === "none" ? "block" : "none";
+    const opening = menu.style.display === "none";
+    menu.style.display = opening ? "block" : "none";
+    if (!opening) return;
+    renderMenu(menuItemsFor(pageURL));
+    loadFormats(pageURL);
   }
 
   function setLabel(html) {
