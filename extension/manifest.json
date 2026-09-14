@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "baaz \u2014 download manager",
+  "name": "Baaz",
   "version": "0.1.5",
-  "description": "Hands browser downloads to the baaz download daemon",
+  "description": "Faster downloads in Chrome \u2014 files are split into parts, and videos download with one click.",
   "background": {
     "service_worker": "background.js"
   },
@@ -17,7 +17,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "baaz",
+    "default_title": "Baaz",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"

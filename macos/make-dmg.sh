@@ -39,8 +39,6 @@ Opening it sets up everything except the Chrome extension, which Chrome
 does not let an app install. The app will show you how: in Chrome open
 chrome://extensions, turn on Developer mode, click "Load unpacked", and
 pick the baaz-extension folder in your Downloads.
-
-The "baaz" command is installed to ~/.local/bin as well.
 TXT
 
 rm -f "$dmg"

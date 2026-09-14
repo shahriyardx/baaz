@@ -30,8 +30,7 @@ yay -S baaz
 Download **[Baaz.dmg][dmg]**, drag **Baaz** onto Applications, and open it.
 
 A falcon appears in your menu bar. That's the whole install — opening the app
-also puts the `baaz` command in `~/.local/bin`, connects Chrome, and sets
-itself to open at login.
+connects Chrome and sets itself to open at login.
 
 > On first open, **right-click the app → Open**. baaz isn't notarized yet, so
 > a plain double-click is refused once.
@@ -82,12 +81,7 @@ Chrome on macOS refuses to install an extension from a file on your computer —
 only the Chrome Web Store counts. So the extension is loaded by hand once. It
 stays loaded afterwards, including across updates and restarts.
 
-Opening Baaz.app already did the setup and put the extension in
-**`~/Downloads/baaz-extension`**. All that's left:
-
-1. (Only if you installed from the terminal instead of the disk image:
-   run `baaz install-chrome`.)
-2. Open `chrome://extensions`.
+1. Open `chrome://extensions`.
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and pick the `baaz-extension` folder in your
    Downloads. (The path is also on your clipboard: press <kbd>⇧⌘G</kbd> then
@@ -95,12 +89,11 @@ Opening Baaz.app already did the setup and put the extension in
 5. Restart Chrome — `chrome://restart`.
 
 Keep that folder — Chrome loads the extension from it every launch, so
-deleting it disables the extension. Re-running `baaz install-chrome` updates
-it in place, and Chrome picks up the new version on restart.
+deleting it disables the extension. Baaz keeps it up to date by itself, and
+**Settings → Browser → Re-run Chrome Setup** puts it back if it goes missing.
 
-If you ever need it on a machine where you haven't run `install-chrome`,
-the same folder is on the releases page as
-**[baaz-extension.zip][ext]**.
+The same folder is on the releases page as **[baaz-extension.zip][ext]** if
+you need it on another machine.
 
 [ext]: https://github.com/shahriyardx/baaz/releases/latest/download/baaz-extension.zip
 
@@ -122,16 +115,11 @@ sudo dnf install yt-dlp ffmpeg      # Fedora
 brew install yt-dlp ffmpeg          # macOS
 ```
 
-**Optional — the widget:**
+**Optional — the Omarchy bar widget (Linux):**
 
 ```
-baaz install-bar            # Linux (Omarchy bar)
-baaz install-menubar        # macOS (menu bar)
+baaz install-bar
 ```
-
-On macOS the installer already does this for you. `install-menubar` puts
-`Baaz.app` in `~/Applications`, starts it, and makes it open at login. Run it
-without `sudo`.
 
 ---
 
@@ -157,10 +145,12 @@ Then refresh the browser side (the new extension ships inside baaz):
 sudo baaz install-chrome
 ```
 
-and restart Chrome (`chrome://restart`). On Linux, Chrome swaps in the new
-extension by itself — no prompts, no developer mode. On macOS,
-`~/Downloads/baaz-extension` is rewritten in place, so Chrome picks the new
-version up on restart — you do **not** have to "Load unpacked" again.
+and restart Chrome (`chrome://restart`). Chrome swaps in the new extension by
+itself — no prompts, no developer mode.
+
+On macOS none of that applies: Baaz updates itself and rewrites
+`~/Downloads/baaz-extension` in place, so restarting Chrome is all it takes —
+you do **not** have to "Load unpacked" again.
 
 ---
 
@@ -277,8 +267,8 @@ Click the widget → the **gear icon**:
 - minimum file size baaz takes over (smaller files stay with Chrome)
 - category folder sorting on/off
 
-From a terminal that last one is `baaz config dir /path/to/folder` (quote it
-if it has spaces). Category folders are created inside whatever you pick.
+Category folders are created inside whatever you pick. (On Linux the same
+setting is `baaz config dir /path/to/folder`.)
 
 The switch next to the gear turns Chrome takeover on/off entirely.
 
@@ -291,12 +281,12 @@ The switch next to the gear turns Chrome takeover on/off entirely.
 | A download is stuck | Widget → pause it, then resume. It continues from where it stopped. |
 | I want a file AND its list entry gone | Hover the entry in the widget → trash icon. "Clear all" only empties the list, files stay. |
 | Chrome still shows its own save dialog | Run `sudo baaz install-chrome` again, then `chrome://restart`. |
-| macOS: extension stopped working | Chrome loads it from `~/Downloads/baaz-extension` — if that folder was deleted or moved, re-run `sudo baaz install-chrome` and "Load unpacked" it again. |
-| macOS: no icon in the menu bar | `baaz install-menubar` (without `sudo`). If the bar is full, macOS hides icons — widen it or quit another one. |
+| macOS: extension stopped working | Chrome loads it from `~/Downloads/baaz-extension`. If that folder was deleted or moved: **Settings → Browser → Re-run Chrome Setup**, then "Load unpacked" it again. |
+| macOS: no icon in the menu bar | Open Baaz from Applications. If the bar is full, macOS hides icons — widen it or quit another one. |
 | macOS: no notifications | First banner asks for permission. Otherwise allow **Script Editor** in System Settings → Notifications. |
-| macOS: "cannot be opened because Apple cannot check it" | Baaz.app isn't notarized yet. Right-click it in `~/Applications` → **Open** → **Open**, once. Or clear the download flag: `xattr -dr com.apple.quarantine ~/Applications/Baaz.app ~/.local/bin/baaz`. |
-| macOS: menu bar panel says "daemon starting…" and stays there | The app can't find the `baaz` command. It looks in `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin` — make sure the binary is in one of them. |
-| macOS: how do I quit the menu bar app? | Click the icon → **Quit** (bottom right). To stop it opening at login: `launchctl bootout gui/$(id -u)/com.shahriyar.baaz.menubar`. |
+| macOS: "cannot be opened because Apple cannot check it" | Baaz.app isn't notarized yet. Right-click it in **Applications** → **Open** → **Open**, once. |
+| macOS: panel says "daemon starting…" and stays there | Quit Baaz (falcon → Quit) and open it again. If it persists, reinstall from the disk image. |
+| macOS: how do I quit? | Click the falcon → **Quit**, or ⌘Q. To stop it opening at login: **Settings → General → Open baaz at login**. |
 
 ---
 
