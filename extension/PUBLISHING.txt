@@ -63,9 +63,28 @@ else is kept.
 
 JUSTIFICATION - host permission use
 ----
-A download can start from any site, and the Download button has to be able
-to appear over a video on any site. The extension reads the page only to
-find the video's address; it does not read or transmit page content.
+Baaz is a download manager, so the site a download comes from cannot be
+known in advance: it is whatever site the user is on. Two things need access
+to that site.
+
+1. Downloads behind a login. Baaz reads the cookies for the download's own
+URL and passes them to the Baaz application so the file downloads as the
+signed-in user, exactly as Chrome would have. Without this, any file behind
+a login fails to download.
+
+2. The Download button over a video. A video element can appear on any site,
+so the content script has to be able to run anywhere in order to find one
+and read its address.
+
+A narrower list of sites is not possible, because a download or a video can
+come from any site.
+
+What the extension does not do: it does not read, collect, store or transmit
+page content. It reads only the address of a video the user hovers, and
+cookies only for the exact URL being downloaded. Neither is stored. Nothing
+is sent anywhere except the Baaz application running on the user's own
+computer, over native messaging. The extension makes no network requests of
+its own.
 ----
 
 JUSTIFICATION - remote code use
@@ -243,11 +262,12 @@ else is kept.
 ----
 
 Host permission use  (the console's label for <all_urls>)
-----
-A download can start from any site, and the Download button has to be able
-to appear over a video on any site. The extension reads the page only to
-find the video's address; it does not read or transmit page content.
-----
+    See section 0 for the text. Keep it: it names both features that need
+    the access, says why a narrower list cannot work, and states plainly
+    what is not done with it. Broad host access gets an in-depth review, and
+    that is the decision on record — narrowing it would break downloads
+    behind a login and limit the video button to a handful of sites, which
+    is a worse product than a slower first review.
 
 REMOTE CODE
     Select: "No, I am not using remote code"
@@ -311,7 +331,14 @@ one if the extension is ever self-hosted again.
 -----------------------------------------------------------------------
 
 A first submission using nativeMessaging, cookies and <all_urls> is reviewed
-by hand. Days is normal; weeks happens. Later updates are usually quicker.
+by hand, and the console says so when you upload. Days is normal; weeks
+happens. Later updates are usually quicker.
+
+Broad host access is a deliberate choice, not an oversight. The alternatives
+were both worse: dropping it breaks every download behind a login, and
+narrowing the content script to a list of video sites removes the Download
+button everywhere else. The core feature - taking over Chrome's downloads -
+needs no host access at all, which is worth saying if a reviewer asks.
 
 If it is rejected, the reason is nearly always a permission justification
 that does not explain why the feature cannot work without it. Rewrite the
