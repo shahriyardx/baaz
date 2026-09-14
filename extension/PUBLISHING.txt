@@ -21,7 +21,8 @@ Console: https://chrome.google.com/webstore/devconsole
     The store assigns its own ID and rejects a package carrying one.
 
 [ ] Run:  make extension-screenshots
-    Produces build/store-screenshots/ - three 1280x800 PNGs.
+    Produces build/store-screenshots/ - three 1280x800 PNGs and the
+    128x128 listing icon.
 
     Everything for the upload is under build/ in the repo. Nothing is put
     anywhere else.
@@ -90,11 +91,14 @@ Open source, MIT licensed.
 
 SCREENSHOTS
     Already made. Run:  make extension-screenshots
-    Output: build/store-screenshots/ - three 1280x800 PNGs, upload in order.
+    Output: build/store-screenshots/ - upload the three in order.
 
         1-faster-downloads.png   the popup, mid-download
         2-video-one-click.png    the Download button and quality menu
         3-privacy.png            what Baaz does not do
+
+STORE ICON
+    build/store-screenshots/store-icon-128.png  (128x128, required)
 
     They show only our own interface. A listing is rejected for showing page
     content whose rights are not yours, so the video is a plain placeholder

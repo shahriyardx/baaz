@@ -44,4 +44,15 @@ names=(1-faster-downloads 2-video-one-click 3-privacy)
 for i in 0 1 2; do
   sips -z 800 1280 "$tmp/baaz-scene$((i+1)).png" --out "$out/${names[$i]}.png" >/dev/null
 done
-echo "wrote $(ls "$out" | wc -l | tr -d ' ') screenshots to $out"
+
+# The listing needs the 128x128 icon uploaded separately from the package, so
+# it belongs with the rest of the upload rather than being dug out of the
+# source tree.
+icon="$(dirname "$here")/icons/icon128.png"
+if [ -f "$icon" ]; then
+  cp "$icon" "$out/store-icon-128.png"
+else
+  echo "render: WARNING - icons/icon128.png missing; the listing needs it"
+fi
+
+echo "wrote $(ls "$out" | wc -l | tr -d ' ') files to $out"
