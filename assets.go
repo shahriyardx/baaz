@@ -1,18 +1,16 @@
-// Package assets embeds what `baaz install-chrome` deploys: the extension
-// source and the key that fixes its extension ID.
+// Package assets embeds the Chrome extension source.
 //
-// The private key is committed on purpose: it only pins the local extension
-// ID, it is not a Chrome Web Store identity. Generate a fresh one before any
-// Web Store upload.
+// The extension is published on the Chrome Web Store and installed from
+// there on every platform, so nothing here is packed or side-loaded. The
+// embed is what `extension/pack-store.sh` and the release workflow build the
+// upload from, and it keeps the extension versioned alongside the daemon it
+// talks to.
 package assets
 
 import "embed"
 
 //go:embed all:extension
 var Extension embed.FS
-
-//go:embed keys/extension-key.pem
-var ExtensionKey []byte
 
 //go:embed all:bar-plugin
 var BarPlugin embed.FS

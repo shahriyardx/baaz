@@ -117,11 +117,6 @@ private struct BrowserSettings: View {
     @EnvironmentObject var model: DownloadsModel
     @State private var reran = false
 
-    private var extensionDir: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Downloads/baaz-extension")
-    }
-
     var body: some View {
         Form {
             Section {
@@ -129,32 +124,23 @@ private struct BrowserSettings: View {
                     get: { model.settings.intercept },
                     set: { _ in model.toggleIntercept() }
                 ))
-                Text("Off means Chrome downloads by itself, as if baaz were not installed.")
+                Text("Off means Chrome downloads by itself, as if Baaz were not installed.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Extension") {
-                Text("Chrome will not let an app install an extension from disk, so it is added by hand once. It stays after that.")
+                Text("Baaz takes over downloads through its Chrome extension. If downloads still go to Chrome, the extension is probably missing or switched off.")
                     .font(.caption).foregroundStyle(.secondary)
-                LabeledContent("Folder") {
-                    HStack {
-                        Text("~/Downloads/baaz-extension")
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Button("Show in Finder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([extensionDir])
-                        }
-                        .disabled(!FileManager.default.fileExists(atPath: extensionDir.path))
-                    }
-                }
                 HStack {
+                    Button("Get the Extension") {
+                        NSWorkspace.shared.open(Setup.storeURL)
+                    }
                     Button("Re-run Chrome Setup") {
                         Setup.rerunChromeSetup()
                         reran = true
                     }
                     if reran {
-                        Text("Done — restart Chrome to pick it up.")
+                        Text("Done — restart Chrome.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }

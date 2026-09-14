@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-
-	"baaz"
 )
 
 // chromeExtensionID derives an extension's ID the way Chrome does: SHA-256
@@ -55,22 +53,10 @@ func TestStoreExtIDMatchesManifestKey(t *testing.T) {
 	}
 }
 
-// The crx Linux installs is signed with this key, so its ID comes from here
-// rather than from the manifest.
-func TestSelfHostedExtIDMatchesSigningKey(t *testing.T) {
-	src, err := packedExtensionID()
-	if err != nil {
-		t.Skipf("cannot pack the extension: %v", err)
-	}
-	if src != selfHostedExtID {
-		t.Errorf("keys/extension-key.pem yields %q but selfHostedExtID is %q", src, selfHostedExtID)
-	}
-}
-
 // Every ID the host accepts must be a real 32-character extension ID.
 func TestAllowedOriginsCoversBothIDs(t *testing.T) {
 	got := allowedOrigins("")
-	for _, id := range []string{storeExtID, selfHostedExtID} {
+	for _, id := range []string{storeExtID} {
 		if len(id) != 32 {
 			t.Errorf("%q is not a 32-character extension ID", id)
 		}
@@ -80,10 +66,8 @@ func TestAllowedOriginsCoversBothIDs(t *testing.T) {
 	}
 	// An override is added, not substituted, so both routes keep working.
 	withExtra := allowedOrigins("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-	for _, id := range []string{storeExtID, selfHostedExtID} {
-		if !contains(withExtra, id) {
-			t.Errorf("--ext-id dropped %s from allowed_origins", id)
-		}
+	if !contains(withExtra, storeExtID) {
+		t.Errorf("--ext-id dropped the store ID from allowed_origins")
 	}
 }
 
@@ -96,14 +80,4 @@ func contains(haystack, needle string) bool {
 		}
 		return false
 	})()
-}
-
-// packedExtensionID reports the ID the packed crx would carry.
-func packedExtensionID() (string, error) {
-	_, _, id, _, err := extensionAssets()
-	if err != nil {
-		return "", err
-	}
-	_ = assets.ExtensionKey
-	return id, nil
 }

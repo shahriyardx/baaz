@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# baaz installer: downloads the latest release and finishes the setup.
+# baaz installer for Linux: downloads the latest release and finishes setup.
 # Usage: curl -fsSL https://github.com/shahriyardx/baaz/releases/latest/download/install.sh | bash
 #
 # Run this as yourself, NOT with sudo. It asks for your password once, up
@@ -19,9 +19,24 @@ if [ "$(id -u)" -eq 0 ]; then
   exit 1
 fi
 
+# Linux only. macOS installs from the disk image, which carries the app, the
+# CLI and the whole setup — running this there would leave a half-install
+# with no app, no menu bar item and no automatic updates.
 case "$(uname -s)" in
-  Linux)  OS="linux" ;;
-  Darwin) OS="darwin" ;;
+  Linux) OS="linux" ;;
+  Darwin)
+    cat <<'MSG'
+baaz: this installer is for Linux.
+
+On macOS, download the disk image instead:
+
+  https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
+
+Drag Baaz onto Applications and open it. It sets up everything, keeps
+itself updated, and puts a falcon in your menu bar.
+MSG
+    exit 1
+    ;;
   *) echo "baaz: unsupported OS: $(uname -s)"; exit 1 ;;
 esac
 
@@ -61,8 +76,8 @@ if [ "$HAVE_SUDO" -eq 1 ]; then
 fi
 
 # ---------- the binary ----------
-URL="https://github.com/${REPO}/releases/latest/download/baaz-${OS}-${ARCH}"
-echo "Downloading baaz (${OS}/${ARCH})..."
+URL="https://github.com/${REPO}/releases/latest/download/baaz-linux-${ARCH}"
+echo "Downloading baaz (linux/${ARCH})..."
 mkdir -p "$BIN_DIR"
 # Replace rather than overwrite in place. macOS caches a malware verdict per
 # inode, so a binary that was ever blocked at this path stays blocked even
@@ -70,30 +85,7 @@ mkdir -p "$BIN_DIR"
 rm -f "$BIN"
 curl -fL --progress-bar "$URL" -o "$BIN"
 chmod +x "$BIN"
-[ "$OS" = "darwin" ] && xattr -d com.apple.quarantine "$BIN" 2>/dev/null || true
 echo "Installed: $BIN"
-
-# ---------- the menu bar app (macOS) ----------
-APP_OK=0
-if [ "$OS" = "darwin" ]; then
-  echo
-  echo "Downloading the menu bar app..."
-  TMP="$(mktemp -d)"
-  if curl -fL --progress-bar \
-      "https://github.com/${REPO}/releases/latest/download/Baaz-macos.zip" \
-      -o "${TMP}/Baaz.zip"; then
-    mkdir -p "${HOME}/Applications"
-    rm -rf "${HOME}/Applications/Baaz.app"
-    # ditto, not unzip: it keeps the bundle's symlinks and code signature.
-    ditto -x -k "${TMP}/Baaz.zip" "${HOME}/Applications"
-    xattr -dr com.apple.quarantine "${HOME}/Applications/Baaz.app" 2>/dev/null || true
-    echo "Installed: ${HOME}/Applications/Baaz.app"
-    APP_OK=1
-  else
-    echo "NOTE: could not fetch the menu bar app; the CLI works without it."
-  fi
-  rm -rf "$TMP"
-fi
 
 # ---------- Chrome (needs root) ----------
 echo
@@ -116,11 +108,7 @@ command -v ffmpeg >/dev/null 2>&1 || missing="${missing:+$missing }ffmpeg"
 
 if [ -n "$missing" ]; then
   install_cmd=""
-  if [ "$OS" = "darwin" ]; then
-    if command -v brew >/dev/null 2>&1; then
-      install_cmd="brew install $missing"   # never under sudo; brew refuses
-    fi
-  elif command -v pacman >/dev/null 2>&1; then
+  if command -v pacman >/dev/null 2>&1; then
     install_cmd="sudo pacman -S --needed --noconfirm $missing"
   elif command -v apt-get >/dev/null 2>&1; then
     install_cmd="sudo apt-get install -y $missing"
@@ -133,11 +121,7 @@ if [ -n "$missing" ]; then
   echo
   echo "Video downloads (YouTube, Facebook, TikTok…) need: $missing"
   if [ -z "$install_cmd" ]; then
-    if [ "$OS" = "darwin" ]; then
-      echo "Install Homebrew (https://brew.sh), then run:  brew install $missing"
-    else
-      echo "Install $missing with your package manager to enable them."
-    fi
+    echo "Install $missing with your package manager to enable them."
   # Opening /dev/tty is the real test — `[ -r /dev/tty ]` passes even with no
   # controlling terminal, and a failed read would otherwise look like the user
   # pressing Enter and start an install nobody agreed to.
@@ -167,11 +151,9 @@ if [ -n "$missing" ]; then
   fi
 fi
 
-# ---------- the widget (must NOT be root) ----------
+# ---------- the bar widget ----------
 echo
-if [ "$OS" = "darwin" ] && [ "$APP_OK" -eq 1 ]; then
-  "$BIN" install-menubar || echo "NOTE: run '$BIN install-menubar' by hand to start the menu bar app."
-elif [ "$OS" = "linux" ] && command -v omarchy >/dev/null 2>&1; then
+if command -v omarchy >/dev/null 2>&1; then
   "$BIN" install-bar || echo "NOTE: run '$BIN install-bar' by hand to add the bar widget."
 fi
 
@@ -182,4 +164,6 @@ if ! command -v baaz >/dev/null 2>&1; then
   echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
   echo
 fi
-echo "Done — restart Chrome to finish."
+echo "Last step: install the extension from the Chrome Web Store,"
+echo "  https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl"
+echo "then restart Chrome."

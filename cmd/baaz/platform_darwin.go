@@ -13,12 +13,10 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 // widgetUsage is the platform's widget line in the top-level help.
@@ -240,84 +238,6 @@ func copyRegularFile(src, dst string, mode os.FileMode) error {
 	return out.Close()
 }
 
-// installExtension unpacks the extension where Chrome can load it.
-//
-// macOS cannot use the crx path Linux uses: since Chrome 44 no external
-// install may point at a local CRX file, and the External Extensions
-// directory honors only an external_update_url aimed at the Web Store. So
-// until baaz ships on the Web Store the extension has to be loaded unpacked,
-// which is a one-time click and then permanent.
-//
-// The manifest pins a public key, so the unpacked extension keeps the same ID
-// as the packed one — the native-messaging manifest written above still
-// matches it. Needs no root.
-func installExtension() {
-	src, _, id, _, err := extensionAssets()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	home, err := realUserHome()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	// Downloads, not Application Support: ~/Library is hidden in Finder, so a
-	// path there is one the user cannot browse to. Putting it where every
-	// other download lands means nothing has to be fetched by hand.
-	dst := filepath.Join(home, "Downloads", "baaz-extension")
-	// Replace wholesale so a file dropped from the new version cannot linger
-	// and get loaded alongside it.
-	if err := os.RemoveAll(dst); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	if err := writeFS(src, dst); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz: unpack extension:", err)
-		return
-	}
-	// Under sudo these would land owned by root, and Chrome — running as the
-	// user — could not read them.
-	chownToInvoker(dst)
-
-	// ~/Library is hidden in Finder, so the folder cannot be browsed to.
-	// Putting it on the clipboard turns step 3 into paste-and-enter.
-	copied := toClipboard(dst)
-
-	fmt.Println("\nput the extension in", dst)
-	fmt.Println("Chrome on macOS cannot install a local .crx, so load it once by hand:")
-	fmt.Println("  1. open chrome://extensions")
-	fmt.Println("  2. turn on “Developer mode” (top right)")
-	fmt.Println("  3. click “Load unpacked” and pick the baaz-extension folder")
-	fmt.Println("     in your Downloads")
-	if copied {
-		fmt.Println("     (or press ⇧⌘G then ⌘V — the path is on your clipboard)")
-	}
-	fmt.Println("\nit stays loaded after that, and updates in place when you")
-	fmt.Println("re-run install-chrome; the ID is pinned to", id)
-}
-
-// writeFS copies an embedded tree onto disk.
-func writeFS(src fs.FS, dst string) error {
-	return fs.WalkDir(src, ".", func(path string, d fs.DirEntry, werr error) error {
-		if werr != nil {
-			return werr
-		}
-		target := filepath.Join(dst, path)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		data, rerr := fs.ReadFile(src, path)
-		if rerr != nil {
-			return rerr
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, 0o644)
-	})
-}
-
 // chownToInvoker hands a tree back to the user who ran sudo. A no-op when
 // not running as root.
 func chownToInvoker(root string) {
@@ -336,11 +256,4 @@ func chownToInvoker(root string) {
 		os.Chown(path, uid, gid)
 		return nil
 	})
-}
-
-// toClipboard puts s on the pasteboard, reporting whether it got there.
-func toClipboard(s string) bool {
-	cmd := exec.Command("pbcopy")
-	cmd.Stdin = strings.NewReader(s)
-	return cmd.Run() == nil
 }

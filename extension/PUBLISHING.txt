@@ -120,8 +120,10 @@ https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
 1. BEFORE YOU UPLOAD
 -----------------------------------------------------------------------
 
-[ ] Bump "version" in extension/manifest.json. CI fails the release if it
-    does not match the git tag. It is 0.1.6 now, so the next tag is v0.1.6.
+[ ] Bump "version" in extension/manifest.json only when the extension
+    itself changes. It is independent of the app's version now: the store
+    reviews on its own schedule, and tying the two meant a re-upload for
+    every app release. It is 0.1.6.
 
 [ ] Run:  make extension-store
     Produces build/baaz-extension-store.zip with the "key" field stripped.
@@ -313,21 +315,17 @@ PRIVACY POLICY URL
     every copy loaded unpacked - including the one baaz unpacks into
     ~/Downloads/baaz-extension - has the published ID.
 
-[x] Store ID:      nidklljbjhpljgdeebcpbbnbcijbbcdl
-    Self-host ID:  bekhpkepdgjmplfdclkflkkhbpbgeihl
+[x] Extension ID: nidklljbjhpljgdeebcpbbnbcijbbcdl
+    It is in cmd/baaz/main.go as storeExtID, and install-chrome writes it
+    into the native-messaging manifest's allowed_origins.
 
-    Both are in cmd/baaz/main.go, and install-chrome writes both into the
-    native-messaging manifest's allowed_origins.
+ONE ID EVERYWHERE
+    Pinning the store's key means an unpacked load produces the same ID as a
+    store install, so the native-messaging host needs to accept only the one.
 
-WHY TWO
-    An extension's ID comes from the key that signs it. A store install
-    carries Google's key. The crx that Linux installs is signed with
-    keys/extension-key.pem, which is ours, and keeps the ID it always had.
-    Rather than break one route, the host accepts both.
-
-    Once the listing is live, Linux could install from the store instead,
-    via an external_update_url, and the second ID could go. That is a
-    decision for later, not a thing to change before publishing.
+    baaz-extension.zip still ships with each release for anyone who wants to
+    load it unpacked, but nothing points users at it: the store is the
+    install route on macOS and Linux alike.
 
 [ ] After the listing goes live: install from the store and confirm the
     popup shows "connected".

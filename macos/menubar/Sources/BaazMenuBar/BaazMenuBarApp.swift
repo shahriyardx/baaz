@@ -145,24 +145,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Shown once per version, after setup has unpacked the extension.
+    /// Shown once per version. The extension is the one part of the install
+    /// Chrome will not let an app do, but from the Web Store it is one click.
     private static func offerExtensionSetup() {
-        let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Downloads/baaz-extension")
-        guard FileManager.default.fileExists(atPath: dir.path) else { return }
-
         let alert = NSAlert()
         alert.messageText = "One last step: add the Chrome extension"
-        alert.informativeText = """
-        Chrome does not allow an app to install an extension for you, so it         has to be added by hand once — it stays after that.
-
-        In Chrome open chrome://extensions, turn on Developer mode, click         Load unpacked, and choose the baaz-extension folder in your Downloads.
-        """
-        alert.addButton(withTitle: "Show the Folder")
+        alert.informativeText = "Baaz takes over downloads through its Chrome "
+            + "extension. It is on the Chrome Web Store — installing it takes "
+            + "a few seconds, and you only do it once."
+        alert.addButton(withTitle: "Open the Web Store")
         alert.addButton(withTitle: "Later")
         alert.alertStyle = .informational
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.activateFileViewerSelecting([dir])
+            NSWorkspace.shared.open(Setup.storeURL)
         }
     }
 

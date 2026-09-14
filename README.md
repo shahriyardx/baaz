@@ -35,9 +35,8 @@ connects Chrome and sets itself to open at login.
 > On first open, **right-click the app → Open**. baaz isn't notarized yet, so
 > a plain double-click is refused once.
 
-macOS 13 (Ventura) or newer, Intel or Apple Silicon. One step is left over:
-Chrome won't let any app install an extension from your disk, so you add it
-by hand once — the app shows you how, and it's below too.
+macOS 13 (Ventura) or newer, Intel or Apple Silicon. The app will point you
+at the Chrome extension, which installs from the Web Store in one click.
 
 [dmg]: https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
 
@@ -57,50 +56,29 @@ Run it as yourself — **not** with `sudo`. It asks for your password once, at
 the start, and uses it only for the Chrome step; everything else belongs to
 your own account.
 
-(The installer still works on macOS if you prefer a terminal, but the disk
-image is the easier route.)
+The installer is Linux-only; on macOS it points you at the disk image and
+stops, since the app there carries the CLI and does its own setup.
 
 ---
 
 ## Set up Chrome (one time)
 
-### Linux
+Install the extension: **[Baaz on the Chrome Web Store][ext]**, then restart
+Chrome. That is the whole browser side on every platform.
 
-1. In a terminal, run:
-   ```
-   sudo baaz install-chrome
-   ```
-   (It asks for your password. This connects Chrome to baaz, installs the
-   browser extension, and turns off Chrome's "ask where to save" popup.)
-2. Restart Chrome — type `chrome://restart` in the address bar and press Enter.
-3. Chrome shows a small "Enable extension" message once — click **Enable**.
+[ext]: https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl
 
-### macOS
+On **macOS** the app connects Chrome to Baaz by itself when you first open
+it. On **Linux**, run this once:
 
-Chrome on macOS refuses to install an extension from a file on your computer —
-only the Chrome Web Store counts. So the extension is loaded by hand once. It
-stays loaded afterwards, including across updates and restarts.
+```
+sudo baaz install-chrome
+```
 
-1. Open `chrome://extensions`.
-3. Turn on **Developer mode** (top right).
-4. Click **Load unpacked** and pick the `baaz-extension` folder in your
-   Downloads. (The path is also on your clipboard: press <kbd>⇧⌘G</kbd> then
-   <kbd>⌘V</kbd> in the dialog.)
-5. Restart Chrome — `chrome://restart`.
+It writes the native-messaging manifest that lets the extension reach the
+daemon, and turns off Chrome's "ask where to save" dialog.
 
-Keep that folder — Chrome loads the extension from it every launch, so
-deleting it disables the extension. Baaz keeps it up to date by itself, and
-**Settings → Browser → Re-run Chrome Setup** puts it back if it goes missing.
-
-The same folder is on the releases page as **[baaz-extension.zip][ext]** if
-you need it on another machine.
-
-[ext]: https://github.com/shahriyardx/baaz/releases/latest/download/baaz-extension.zip
-
-`sudo` is only needed to apply the no-save-prompt setting to every account.
-Without it everything else still works for you.
-
-That's it. From now on, when you download something in Chrome, baaz takes it.
+That's it. From now on, when you download something in Chrome, Baaz takes it.
 
 **Video downloads from YouTube etc.** need yt-dlp and ffmpeg. On **macOS**
 baaz fetches both itself the first time you download a video — nothing to
@@ -139,18 +117,8 @@ yay -Syu baaz            # Arch / Omarchy
 Other Linux and macOS: run the same curl line from Install again — it fetches
 the latest version.
 
-Then refresh the browser side (the new extension ships inside baaz):
-
-```
-sudo baaz install-chrome
-```
-
-and restart Chrome (`chrome://restart`). Chrome swaps in the new extension by
-itself — no prompts, no developer mode.
-
-On macOS none of that applies: Baaz updates itself and rewrites
-`~/Downloads/baaz-extension` in place, so restarting Chrome is all it takes —
-you do **not** have to "Load unpacked" again.
+The extension updates itself from the Chrome Web Store, and on macOS the app
+updates itself. Nothing to do.
 
 ---
 
@@ -177,11 +145,10 @@ pkill -f BaazMenuBar; pkill -f 'baaz daemon'
 rm -rf /Applications/Baaz.app ~/Applications/Baaz.app
 rm -f  ~/.local/bin/baaz
 rm -f  "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.shahriyar.baaz.json"
-rm -rf ~/Downloads/baaz-extension
 defaults delete com.google.Chrome PromptForDownloadLocation
 ```
 
-On both: remove the extension from `chrome://extensions`, and restart Chrome.
+On both: remove the extension at `chrome://extensions`, and restart Chrome.
 
 Your downloads are never touched. To also drop baaz's own settings and
 download history, delete `~/.config/baaz` and `~/.local/share/baaz` on Linux,
@@ -281,7 +248,7 @@ The switch next to the gear turns Chrome takeover on/off entirely.
 | A download is stuck | Widget → pause it, then resume. It continues from where it stopped. |
 | I want a file AND its list entry gone | Hover the entry in the widget → trash icon. "Clear all" only empties the list, files stay. |
 | Chrome still shows its own save dialog | Run `sudo baaz install-chrome` again, then `chrome://restart`. |
-| macOS: extension stopped working | Chrome loads it from `~/Downloads/baaz-extension`. If that folder was deleted or moved: **Settings → Browser → Re-run Chrome Setup**, then "Load unpacked" it again. |
+| Extension stopped working | Check it is enabled at `chrome://extensions`. If downloads still go to Chrome, use **Settings → Browser → Re-run Chrome Setup** (macOS) or `sudo baaz install-chrome` (Linux), then restart Chrome. |
 | macOS: no icon in the menu bar | Open Baaz from Applications. If the bar is full, macOS hides icons — widen it or quit another one. |
 | macOS: no notifications | First banner asks for permission. Otherwise allow **Script Editor** in System Settings → Notifications. |
 | macOS: "cannot be opened because Apple cannot check it" | Baaz.app isn't notarized yet. Right-click it in **Applications** → **Open** → **Open**, once. |
@@ -333,6 +300,13 @@ CI signs the archive with the `SPARKLE_PRIVATE_KEY` secret — the private half
 of that key pair, exported from the maintainer's keychain with
 `generate_keys -x`. Without the secret a release still publishes, but no
 appcast is generated and existing installs will not see it.
+
+**Two version numbers.** The extension's version in
+`extension/manifest.json` is its own: it belongs to the Chrome Web Store
+listing and moves when the extension changes, at the pace store review
+allows. The app's version is the git tag. They used to be forced equal,
+which meant every app release demanded a store re-upload and a fresh review
+for an extension that had not changed.
 
 **Publishing the extension.** `extension/PUBLISHING.txt` is the Web Store
 listing written out, ready to paste. `make extension-store` builds the upload. The

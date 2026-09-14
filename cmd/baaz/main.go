@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -14,10 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"baaz"
-
 	"baaz/internal/config"
-	"baaz/internal/crx"
 	"baaz/internal/daemon"
 	"baaz/internal/ipc"
 	"baaz/internal/nmhost"
@@ -320,24 +316,20 @@ const nmManifestTmpl = `{
 }
 `
 
-// The manifest pins a public key, so the extension ID is the same wherever it
-// is loaded from — the Web Store, an unpacked folder, or a packed crx.
-//
-// There are two, because there are two keys. A Store install carries Google's
-// key and so gets storeExtID. The crx Linux installs is signed with
-// keys/extension-key.pem, which is ours, and keeps selfHostedExtID. The host
-// accepts both rather than forcing one install route.
-const (
-	storeExtID      = "nidklljbjhpljgdeebcpbbnbcijbbcdl"
-	selfHostedExtID = "bekhpkepdgjmplfdclkflkkhbpbgeihl"
-)
+// storeExtID is the extension's identity on the Chrome Web Store. The store
+// fixes it on first upload and never changes it, so it is the one ID the
+// native-messaging host has to accept.
+const storeExtID = "nidklljbjhpljgdeebcpbbnbcijbbcdl"
 
-// defaultExtID is what --ext-id defaults to when a single ID is needed.
 const defaultExtID = storeExtID
 
+// storeURL is where every user installs the extension from, on every
+// platform. Nothing is packed, unpacked or side-loaded any more.
+const storeURL = "https://chromewebstore.google.com/detail/" + storeExtID
+
 func allowedOrigins(extra string) string {
-	ids := []string{storeExtID, selfHostedExtID}
-	if extra != "" && extra != storeExtID && extra != selfHostedExtID {
+	ids := []string{storeExtID}
+	if extra != "" && extra != storeExtID {
 		ids = append(ids, extra)
 	}
 	quoted := make([]string, 0, len(ids))
@@ -374,32 +366,14 @@ func cmdInstallChrome(args []string) error {
 		}
 		fmt.Println("wrote", path)
 	}
-	fmt.Println("restart Chrome to pick up the native messaging host")
 	installPolicy()
-	installExtension()
 	warnTombstones(home)
-	return nil
-}
 
-// extensionAssets returns the embedded extension tree, its packed crx bytes,
-// the extension ID the signing key produces, and the manifest version.
-// Each platform installs these differently — see installExtension in
-// platform_<goos>.go.
-func extensionAssets() (src fs.FS, crxData []byte, id, version string, err error) {
-	src, err = fs.Sub(assets.Extension, "extension")
-	if err != nil {
-		return nil, nil, "", "", fmt.Errorf("embed: %w", err)
-	}
-	crxData, id, err = crx.Pack(src, assets.ExtensionKey)
-	if err != nil {
-		return nil, nil, "", "", fmt.Errorf("pack extension: %w", err)
-	}
-	var m struct {
-		Version string `json:"version"`
-	}
-	raw, _ := fs.ReadFile(src, "manifest.json")
-	json.Unmarshal(raw, &m)
-	return src, crxData, id, m.Version, nil
+	fmt.Println()
+	fmt.Println("Now install the extension from the Chrome Web Store:")
+	fmt.Println("  " + storeURL)
+	fmt.Println("then restart Chrome.")
+	return nil
 }
 
 // sudoHint prints the sudo re-run command with an absolute path, because

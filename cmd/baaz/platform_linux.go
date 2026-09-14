@@ -36,18 +36,6 @@ func chromeProfileRoots(home string) []string {
 // chromeProcessNames are what the running browser is called, for pgrep -x.
 func chromeProcessNames() []string { return []string{"chrome", "chromium"} }
 
-// crxInstallPath is where the packed extension lands for Chrome to read.
-func crxInstallPath() string { return "/usr/share/baaz/baaz.crx" }
-
-// externalExtDirs are the system-wide "external extension" registries; a
-// json file dropped here installs the crx on the next browser start.
-func externalExtDirs() []string {
-	return []string{
-		"/usr/share/google-chrome/extensions",
-		"/usr/share/chromium/extensions",
-	}
-}
-
 // installPolicy writes a managed policy that stops Chrome from asking where
 // to save each download — the dialog would otherwise appear before the
 // extension ever sees the download. Needs root; prints the command when run
@@ -122,44 +110,4 @@ func cmdInstallWidget() error {
 		time.Sleep(time.Second) // rescan is async; give the shell a beat
 	}
 	return nil
-}
-
-// installExtension packs the embedded extension into a crx and registers it
-// as a Chrome "external extension", so a restart installs it — no unpacked
-// loading, no developer mode. Root only (the registry dirs live in /usr).
-func installExtension() {
-	if os.Geteuid() != 0 {
-		fmt.Println("\nrun with sudo to also auto-install the extension into Chrome:")
-		fmt.Println("  " + sudoHint())
-		return
-	}
-	_, data, id, version, err := extensionAssets()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-
-	crxPath := crxInstallPath()
-	if err := os.MkdirAll(filepath.Dir(crxPath), 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	if err := os.WriteFile(crxPath, data, 0o644); err != nil {
-		fmt.Fprintln(os.Stderr, "baaz:", err)
-		return
-	}
-	fmt.Println("wrote", crxPath)
-
-	entry := fmt.Sprintf("{ \"external_crx\": %q, \"external_version\": %q }\n", crxPath, version)
-	for _, dir := range externalExtDirs() {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			continue
-		}
-		path := filepath.Join(dir, id+".json")
-		if err := os.WriteFile(path, []byte(entry), 0o644); err != nil {
-			continue
-		}
-		fmt.Println("wrote", path)
-	}
-	fmt.Println("extension", id, "installs on next Chrome start (confirm the one-time “Enable” prompt)")
 }

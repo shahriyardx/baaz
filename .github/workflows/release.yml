@@ -15,11 +15,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-      - name: Verify extension version matches tag
-        run: |
-          EXT=$(python3 -c "import json; print(json.load(open('extension/manifest.json'))['version'])")
-          TAG="${GITHUB_REF_NAME#v}"
-          [ "$EXT" = "$TAG" ] || { echo "extension/manifest.json is $EXT but tag is $TAG"; exit 1; }
       - name: Build
         run: |
           LDFLAGS="-s -w -X main.version=${GITHUB_REF_NAME#v}"

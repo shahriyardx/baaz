@@ -11,6 +11,9 @@ import ServiceManagement
 public enum Setup {
     private static let versionKey = "baaz.setupCompletedForVersion"
 
+    /// Where the extension is installed from, on every platform.
+    public static let storeURL = URL(string: "https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl")!
+
     /// The CLI inside this bundle.
     static var bundledCLI: URL? {
         Bundle.main.url(forResource: "baaz", withExtension: nil)
@@ -66,8 +69,9 @@ public enum Setup {
             return false
         }
 
-        // User-level Chrome wiring: native-messaging manifest, the no-save
-        // prompt for this account, and the extension unpacked into Downloads.
+        // User-level Chrome wiring: the native-messaging manifest and the
+        // no-save prompt for this account. The extension itself comes from
+        // the Chrome Web Store.
         runCLI(dst, ["install-chrome"])
         registerLoginItem()
         return true
@@ -101,8 +105,8 @@ public enum Setup {
         return opensAtLogin
     }
 
-    /// Re-runs the Chrome wiring: manifest, per-user policy, and a fresh copy
-    /// of the extension. Safe to call repeatedly.
+    /// Re-runs the Chrome wiring: the native-messaging manifest and the
+    /// per-user policy. Safe to call repeatedly.
     public static func rerunChromeSetup() {
         let cli = FileManager.default.isExecutableFile(atPath: installedCLI.path)
             ? installedCLI : (bundledCLI ?? installedCLI)
