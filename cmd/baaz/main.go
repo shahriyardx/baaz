@@ -316,13 +316,36 @@ const nmManifestTmpl = `{
   "description": "baaz download manager",
   "path": "%s",
   "type": "stdio",
-  "allowed_origins": ["chrome-extension://%s/"]
+  "allowed_origins": [%s]
 }
 `
 
-// The extension manifest pins a public key, which makes the extension ID
-// deterministic no matter where or how it is loaded.
-const defaultExtID = "bekhpkepdgjmplfdclkflkkhbpbgeihl"
+// The manifest pins a public key, so the extension ID is the same wherever it
+// is loaded from — the Web Store, an unpacked folder, or a packed crx.
+//
+// There are two, because there are two keys. A Store install carries Google's
+// key and so gets storeExtID. The crx Linux installs is signed with
+// keys/extension-key.pem, which is ours, and keeps selfHostedExtID. The host
+// accepts both rather than forcing one install route.
+const (
+	storeExtID      = "nidklljbjhpljgdeebcpbbnbcijbbcdl"
+	selfHostedExtID = "bekhpkepdgjmplfdclkflkkhbpbgeihl"
+)
+
+// defaultExtID is what --ext-id defaults to when a single ID is needed.
+const defaultExtID = storeExtID
+
+func allowedOrigins(extra string) string {
+	ids := []string{storeExtID, selfHostedExtID}
+	if extra != "" && extra != storeExtID && extra != selfHostedExtID {
+		ids = append(ids, extra)
+	}
+	quoted := make([]string, 0, len(ids))
+	for _, id := range ids {
+		quoted = append(quoted, fmt.Sprintf("%q", "chrome-extension://"+id+"/"))
+	}
+	return strings.Join(quoted, ", ")
+}
 
 func cmdInstallChrome(args []string) error {
 	fs := flag.NewFlagSet("install-chrome", flag.ExitOnError)
@@ -340,7 +363,7 @@ func cmdInstallChrome(args []string) error {
 	if err != nil {
 		return err
 	}
-	manifest := fmt.Sprintf(nmManifestTmpl, self, *extID)
+	manifest := fmt.Sprintf(nmManifestTmpl, self, allowedOrigins(*extID))
 	for _, dir := range nmHostDirs(home) {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err

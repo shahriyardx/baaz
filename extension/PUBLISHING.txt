@@ -306,24 +306,31 @@ PRIVACY POLICY URL
 
 
 -----------------------------------------------------------------------
-4. AFTER THE FIRST UPLOAD
+4. AFTER THE FIRST UPLOAD - DONE
 -----------------------------------------------------------------------
 
-The store assigns the extension ID. Until both steps are done, a copy
-installed from the store cannot talk to the app, because the app only
-accepts messages from the ID it knows.
+[x] The dashboard's public key is in extension/manifest.json as "key", so
+    every copy loaded unpacked - including the one baaz unpacks into
+    ~/Downloads/baaz-extension - has the published ID.
 
-[ ] In the dashboard, copy the item's public key into
-    extension/manifest.json as "key". Unpacked loads and the packed CRX then
-    share the published ID.
+[x] Store ID:      nidklljbjhpljgdeebcpbbnbcijbbcdl
+    Self-host ID:  bekhpkepdgjmplfdclkflkkhbpbgeihl
 
-[ ] Set defaultExtID in cmd/baaz/main.go to the assigned ID, so the
-    native-messaging manifest's allowed_origins matches.
+    Both are in cmd/baaz/main.go, and install-chrome writes both into the
+    native-messaging manifest's allowed_origins.
 
-[ ] Reinstall and confirm the popup shows "connected".
+WHY TWO
+    An extension's ID comes from the key that signs it. A store install
+    carries Google's key. The crx that Linux installs is signed with
+    keys/extension-key.pem, which is ours, and keeps the ID it always had.
+    Rather than break one route, the host accepts both.
 
-The key committed in keys/ only ever pinned the local ID. Generate a fresh
-one if the extension is ever self-hosted again.
+    Once the listing is live, Linux could install from the store instead,
+    via an external_update_url, and the second ID could go. That is a
+    decision for later, not a thing to change before publishing.
+
+[ ] After the listing goes live: install from the store and confirm the
+    popup shows "connected".
 
 
 -----------------------------------------------------------------------
