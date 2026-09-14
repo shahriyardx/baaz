@@ -22,18 +22,41 @@
     "dailymotion.com", "soundcloud.com",
   ];
 
-  // 4K and 1440p are VP9 or AV1 — YouTube publishes no H.264 that large — so
-  // they are flagged rather than left to surprise someone whose player
-  // cannot decode them. "Best" stays H.264, which plays anywhere.
-  const QUALITIES = [
+  // Built from what the video actually offers, not a fixed list: showing 4K
+  // on a 720p clip promises a download that cannot happen. The daemon asks
+  // yt-dlp and the menu is rebuilt from the answer.
+  const BASE_QUALITIES = [
     { key: "best", label: "Best · plays anywhere" },
-    { key: "2160", label: "4K · needs VLC" },
-    { key: "1440", label: "1440p · needs VLC" },
+    { key: "audio", label: "Audio only · mp3" },
+  ];
+
+  // Above 1080p YouTube has only VP9 and AV1, which QuickTime cannot play.
+  function labelFor(height) {
+    if (height >= 2160) return "4K · needs VLC";
+    if (height > 1080) return height + "p · needs VLC";
+    return height + "p";
+  }
+
+  // Worth offering as a choice; the rest are too small to be useful.
+  const OFFERED = [2160, 1440, 1080, 720, 480];
+
+  const FALLBACK_QUALITIES = [
+    { key: "best", label: "Best · plays anywhere" },
     { key: "1080", label: "1080p" },
     { key: "720", label: "720p" },
     { key: "480", label: "480p" },
     { key: "audio", label: "Audio only · mp3" },
   ];
+
+  function qualitiesFor(heights) {
+    if (!heights || !heights.length) return null;
+    const items = [BASE_QUALITIES[0]];
+    for (const h of OFFERED) {
+      if (heights.includes(h)) items.push({ key: String(h), label: labelFor(h) });
+    }
+    items.push(BASE_QUALITIES[1]);
+    return items;
+  }
 
   const ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>`;
 
@@ -159,19 +182,33 @@
       overflow: "hidden",
       padding: "4px",
     });
-    for (const q of QUALITIES) {
+    // Filled once the daemon reports what this video offers.
+    renderMenu(null);
+    wrap.appendChild(menu);
+    document.documentElement.appendChild(wrap);
+  }
+
+  // null = still asking. An empty menu with a note beats a menu of
+  // resolutions the video does not have.
+  function renderMenu(items) {
+    menu.textContent = "";
+    if (!items) {
+      const note = document.createElement("div");
+      note.textContent = "Checking qualities…";
+      Object.assign(note.style, {
+        padding: "7px 10px", color: "rgba(255,255,255,.5)",
+        fontSize: "12px", fontWeight: "500",
+      });
+      menu.appendChild(note);
+      return;
+    }
+    for (const q of items) {
       const item = document.createElement("div");
       item.textContent = q.label;
       Object.assign(item.style, {
-        display: "flex",
-        alignItems: "center",
-        padding: "7px 10px",
-        color: "rgba(255,255,255,.88)",
-        fontSize: "12px",
-        fontWeight: "500",
-        letterSpacing: "-.01em",
-        borderRadius: "6px",
-        cursor: "pointer",
+        display: "flex", alignItems: "center", padding: "7px 10px",
+        color: "rgba(255,255,255,.88)", fontSize: "12px", fontWeight: "500",
+        letterSpacing: "-.01em", borderRadius: "6px", cursor: "pointer",
         transition: "background .1s ease, color .1s ease",
       });
       item.addEventListener("mouseenter", () => {
@@ -190,8 +227,21 @@
       });
       menu.appendChild(item);
     }
-    wrap.appendChild(menu);
-    document.documentElement.appendChild(wrap);
+  }
+
+  // Asked once per video. A failure falls back to the fixed list rather than
+  // leaving the menu empty — a slow answer should not cost the download.
+  let formatsFor = null;
+  function loadFormats(url) {
+    if (formatsFor === url) return;
+    formatsFor = url;
+    renderMenu(null);
+    chrome.runtime.sendMessage({ type: "baaz-formats", url }, (reply) => {
+      if (formatsFor !== url) return; // the user moved on
+      const items = (reply && reply.ok && qualitiesFor(reply.heights))
+        || FALLBACK_QUALITIES;
+      renderMenu(items);
+    });
   }
 
   function toggleMenu() {

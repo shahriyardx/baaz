@@ -109,6 +109,26 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
 
 // Explicit user click on the in-page video button: bypasses intercept/min-size
 // policy — the user asked for exactly this file.
+// The content script cannot reach the native host, so it asks through here.
+// Used to build the quality menu from what a video actually offers rather
+// than a fixed list.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== "baaz-formats") return;
+  (async () => {
+    try {
+      const reply = await sendNative({ type: "formats", url: msg.url });
+      sendResponse({
+        ok: !!(reply && reply.ok),
+        heights: (reply && reply.heights) || [],
+      });
+    } catch (e) {
+      console.warn("baaz formats failed:", e.message);
+      sendResponse({ ok: false });
+    }
+  })();
+  return true; // async sendResponse
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.type !== "baaz-grab") return;
   (async () => {

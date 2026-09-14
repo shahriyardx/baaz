@@ -4,7 +4,7 @@
 package ipc
 
 type Request struct {
-	Cmd      string            `json:"cmd"` // add|list|pause|resume|cancel|status|watch|ping|getconfig|setconfig
+	Cmd      string            `json:"cmd"` // add|list|pause|resume|cancel|status|watch|ping|getconfig|setconfig|formats
 	URL      string            `json:"url,omitempty"`
 	Filename string            `json:"filename,omitempty"`
 	Headers  map[string]string `json:"headers,omitempty"`
@@ -34,6 +34,8 @@ type Response struct {
 	Error    string    `json:"error,omitempty"`
 	ID       string    `json:"id,omitempty"`
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
+	// Heights a media URL actually offers, tallest first, for "formats".
+	Heights []int `json:"heights,omitempty"`
 }
 
 // SegmentInfo is one byte range of a job. Sent only while a job is in

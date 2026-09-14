@@ -445,6 +445,16 @@ func (m *Manager) speedOf(id string) int64 {
 }
 
 // Snapshot builds the full state view shared by status and watch.
+// Formats reports the resolutions a media URL offers, so a UI can show the
+// ones that exist rather than a fixed list.
+func (m *Manager) Formats(url string) ([]int, error) {
+	// Extraction is a network round trip; the caller is a menu waiting to
+	// open, so it must not hang on a slow or wrong link.
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	return m.eng.AvailableHeights(ctx, url)
+}
+
 func (m *Manager) Snapshot() *ipc.Snapshot {
 	m.mu.Lock()
 	defer m.mu.Unlock()

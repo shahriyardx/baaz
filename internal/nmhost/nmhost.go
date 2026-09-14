@@ -17,7 +17,7 @@ import (
 const maxOutbound = 1 << 20 // Chrome rejects host->browser messages over 1 MB
 
 type inMessage struct {
-	Type      string `json:"type"` // add|ping|cancel
+	Type      string `json:"type"` // add|ping|cancel|formats
 	URL       string `json:"url,omitempty"`
 	Filename  string `json:"filename,omitempty"`
 	Cookies   string `json:"cookies,omitempty"`
@@ -30,6 +30,7 @@ type inMessage struct {
 
 type outMessage struct {
 	OK        bool   `json:"ok"`
+	Heights   []int  `json:"heights,omitempty"` // for "formats"
 	Error     string `json:"error,omitempty"`
 	Rejected  bool   `json:"rejected,omitempty"` // policy skip, not a failure
 	ID        string `json:"id,omitempty"`
@@ -87,6 +88,8 @@ func handle(msg *inMessage) outMessage {
 		req = &ipc.Request{Cmd: "add", URL: msg.URL, Filename: msg.Filename, Headers: headers, Format: msg.Format}
 	case "ping":
 		req = &ipc.Request{Cmd: "ping"}
+	case "formats":
+		req = &ipc.Request{Cmd: "formats", URL: msg.URL}
 	case "cancel":
 		req = &ipc.Request{Cmd: "cancel", ID: msg.ID}
 	default:
@@ -97,7 +100,7 @@ func handle(msg *inMessage) outMessage {
 	if err != nil {
 		return outMessage{OK: false, Error: err.Error()}
 	}
-	out := outMessage{OK: resp.OK, Error: resp.Error, ID: resp.ID}
+	out := outMessage{OK: resp.OK, Error: resp.Error, ID: resp.ID, Heights: resp.Heights}
 	if strings.HasPrefix(resp.Error, ipc.ErrRejected) {
 		out.Rejected = true
 	}
