@@ -19,6 +19,12 @@ enum BaazCLI {
             URL(fileURLWithPath: "/usr/local/bin/baaz"),
             URL(fileURLWithPath: "/usr/bin/baaz"),
         ]
+        // The copy inside this bundle is the last-resort fallback: it always
+        // exists, so the app still works before (or instead of) the copy into
+        // ~/.local/bin that first-run setup makes.
+        if let bundled = Setup.bundledCLI {
+            candidates.append(bundled)
+        }
         for c in candidates where fm.isExecutableFile(atPath: c.path) {
             return c
         }

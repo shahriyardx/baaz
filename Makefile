@@ -2,9 +2,10 @@ BIN     := $(HOME)/.local/bin/baaz
 PLUGIN  := $(HOME)/.config/omarchy/plugins/shahriyardx.baaz
 APP     := $(HOME)/Applications/Baaz.app
 BUILD   := build
+VERSION := 0.0.0-dev
 
 .PHONY: build test install install-plugin install-chrome uninstall \
-        macos-app macos-test macos-install macos-check
+        macos-app macos-dmg macos-test macos-install macos-check
 
 build:
 	go build -o baaz ./cmd/baaz
@@ -50,6 +51,10 @@ uninstall:
 # Omarchy bar plugin.
 macos-app:
 	./macos/make-app.sh $(BUILD)
+
+# The shippable macOS artifact: app + embedded CLI, as one drag.
+macos-dmg:
+	./macos/make-dmg.sh $(BUILD) $(VERSION)
 
 macos-test:
 	swift test --package-path macos/menubar

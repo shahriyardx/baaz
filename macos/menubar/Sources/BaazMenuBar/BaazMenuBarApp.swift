@@ -55,6 +55,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sigterm = src
 
         model.start()
+
+        // Dragging the app out of the DMG is the install: this puts the CLI
+        // on PATH, wires up Chrome and registers the login item. Loading the
+        // extension is the one step Chrome will not let an app do.
+        Setup.runIfNeeded { firstRun in
+            if firstRun { Self.offerExtensionSetup() }
+        }
+    }
+
+    /// Shown once per version, after setup has unpacked the extension.
+    private static func offerExtensionSetup() {
+        let dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Downloads/baaz-extension")
+        guard FileManager.default.fileExists(atPath: dir.path) else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "One last step: add the Chrome extension"
+        alert.informativeText = """
+        Chrome does not allow an app to install an extension for you, so it         has to be added by hand once — it stays after that.
+
+        In Chrome open chrome://extensions, turn on Developer mode, click         Load unpacked, and choose the baaz-extension folder in your Downloads.
+        """
+        alert.addButton(withTitle: "Show the Folder")
+        alert.addButton(withTitle: "Later")
+        alert.alertStyle = .informational
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.activateFileViewerSelecting([dir])
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

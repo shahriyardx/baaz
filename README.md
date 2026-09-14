@@ -23,7 +23,24 @@ TikTok and more with one click.
 yay -S baaz
 ```
 
-### Any other Linux, and macOS
+### macOS
+
+Download **[Baaz.dmg][dmg]**, drag **Baaz** onto Applications, and open it.
+
+A falcon appears in your menu bar. That's the whole install — opening the app
+also puts the `baaz` command in `~/.local/bin`, connects Chrome, and sets
+itself to open at login.
+
+> On first open, **right-click the app → Open**. baaz isn't notarized yet, so
+> a plain double-click is refused once.
+
+macOS 13 (Ventura) or newer, Intel or Apple Silicon. One step is left over:
+Chrome won't let any app install an extension from your disk, so you add it
+by hand once — the app shows you how, and it's below too.
+
+[dmg]: https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
+
+### Any other Linux
 
 Paste this into a terminal:
 
@@ -39,9 +56,8 @@ Run it as yourself — **not** with `sudo`. It asks for your password once, at
 the start, and uses it only for the Chrome step; everything else belongs to
 your own account.
 
-**macOS** needs 13 (Ventura) or newer, Intel or Apple Silicon — and one extra
-click that Linux doesn't: Chrome won't let any app install an extension from
-your disk, so you load it yourself once. Takes a minute, see below.
+(The installer still works on macOS if you prefer a terminal, but the disk
+image is the easier route.)
 
 ---
 
@@ -64,13 +80,11 @@ Chrome on macOS refuses to install an extension from a file on your computer —
 only the Chrome Web Store counts. So the extension is loaded by hand once. It
 stays loaded afterwards, including across updates and restarts.
 
-1. In a terminal, run:
-   ```
-   sudo baaz install-chrome
-   ```
-   It connects Chrome to baaz, turns off the "ask where to save" popup, and
-   puts the extension in **`~/Downloads/baaz-extension`** — nothing to
-   download by hand.
+Opening Baaz.app already did the setup and put the extension in
+**`~/Downloads/baaz-extension`**. All that's left:
+
+1. (Only if you installed from the terminal instead of the disk image:
+   run `baaz install-chrome`.)
 2. Open `chrome://extensions`.
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and pick the `baaz-extension` folder in your
@@ -156,14 +170,11 @@ sudo rm -f /usr/share/google-chrome/extensions/*.json /etc/opt/chrome/policies/m
 
 ### macOS
 
-The menu bar app opens at login, which is not something you can spot in Finder,
-so remove that registration too:
+Deleting Baaz.app also removes its login item. The rest:
 
 ```
-launchctl bootout gui/$(id -u)/com.shahriyar.baaz.menubar
 pkill -f BaazMenuBar; pkill -f 'baaz daemon'
-rm -rf ~/Applications/Baaz.app
-rm -f  ~/Library/LaunchAgents/com.shahriyar.baaz.menubar.plist
+rm -rf /Applications/Baaz.app ~/Applications/Baaz.app
 rm -f  ~/.local/bin/baaz
 rm -f  "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.shahriyar.baaz.json"
 rm -rf ~/Downloads/baaz-extension
@@ -254,8 +265,13 @@ The switch next to the gear turns Chrome takeover on/off entirely.
 
 Requires Go 1.27+ (see `go.mod`). `make install` builds and installs to
 `~/.local/bin/baaz`.
-On macOS use `make macos-install` — it also builds `Baaz.app` (needs Xcode)
-and registers the login item. `make macos-test` runs the Swift tests.
+On macOS, `make macos-dmg` builds the shippable `Baaz.dmg` (needs Xcode):
+a universal `Baaz.app` with the universal `baaz` CLI inside it at
+`Contents/Resources/baaz`. The app copies that CLI to `~/.local/bin` on first
+launch, runs `install-chrome`, and registers itself with `SMAppService` — so
+the disk image is the whole install and nothing has to be run in a terminal.
+`make macos-app` builds just the bundle; `make macos-test` runs the Swift
+tests.
 
 Components: one Go binary (daemon + CLI + native-messaging host, unix socket,
 JSON-lines IPC), a Chrome MV3 extension in `extension/` (ID pinned via `key`

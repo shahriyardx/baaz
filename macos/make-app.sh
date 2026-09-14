@@ -17,15 +17,34 @@ app="$out/Baaz.app"
 macos_dir="$app/Contents/MacOS"
 res_dir="$app/Contents/Resources"
 
-echo "building BaazMenuBar (release)..."
-swift build --package-path "$here/menubar" -c release
+# Universal, so one bundle serves Apple Silicon and Intel. The CI runner is
+# arm64 and a thin build would leave Intel users with an app that cannot run.
+arch_flags="--arch arm64 --arch x86_64"
 
-bin="$(swift build --package-path "$here/menubar" -c release --show-bin-path)/BaazMenuBar"
+echo "building BaazMenuBar (release, universal)..."
+swift build --package-path "$here/menubar" -c release $arch_flags
+
+bin="$(swift build --package-path "$here/menubar" -c release $arch_flags --show-bin-path)/BaazMenuBar"
 [ -x "$bin" ] || { echo "make-app: $bin missing"; exit 1; }
 
 rm -rf "$app"
 mkdir -p "$macos_dir" "$res_dir"
 cp "$bin" "$macos_dir/BaazMenuBar"
+
+# The CLI ships inside the bundle. It is the daemon, the Chrome
+# native-messaging host and the command line tool, so dragging the app to
+# Applications has to be enough to get it — there is no second download.
+echo "building the baaz CLI (universal)..."
+for a in amd64 arm64; do
+  CGO_ENABLED=0 GOOS=darwin GOARCH="$a" go build -trimpath     -ldflags "-s -w -X main.version=${version}"     -o "$out/baaz-darwin-$a" "$root/cmd/baaz"
+done
+lipo -create -output "$res_dir/baaz" "$out/baaz-darwin-amd64" "$out/baaz-darwin-arm64"
+rm -f "$out/baaz-darwin-amd64" "$out/baaz-darwin-arm64"
+chmod 755 "$res_dir/baaz"
+
+# XProtect deletes Go binaries matching its adware signature; the copy inside
+# the bundle is just as exposed as a standalone one.
+"$here/xprotect-check.sh" "$res_dir/baaz"
 
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
