@@ -15,6 +15,7 @@ type Config struct {
 	Intercept    *bool  `json:"intercept,omitempty"` // pointer: absent = true
 	MinSizeMB    int    `json:"minSizeMB"`
 	Categorize   *bool  `json:"categorize,omitempty"` // pointer: absent = true
+	SpeedLimitKB int    `json:"speedLimitKB"`         // total cap in KB/s; 0 = unlimited
 }
 
 func Default() *Config {
@@ -72,6 +73,9 @@ func Load() *Config {
 	}
 	if c.DownloadDir == "" {
 		c.DownloadDir = "~/Downloads"
+	}
+	if c.SpeedLimitKB < 0 {
+		c.SpeedLimitKB = 0
 	}
 	return c
 }

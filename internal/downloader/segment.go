@@ -104,6 +104,12 @@ func copyToSegment(ctx context.Context, j *Job, f *os.File, seg *Segment, r io.R
 		}
 		n, rerr := r.Read(buf)
 		if n > 0 {
+			// Throttle after the read: the bytes are already off the socket,
+			// so holding them here is what applies backpressure to the
+			// server, exactly like the soft-pause above.
+			if err := j.limiter.Wait(ctx, n); err != nil {
+				return err
+			}
 			off := seg.Start + seg.written()
 			if _, werr := f.WriteAt(buf[:n], off); werr != nil {
 				return werr

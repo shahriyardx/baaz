@@ -136,9 +136,15 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 	}
 	// temp path keeps .part/.ytdl clutter out of the visible folder; the
 	// finished file lands in the home path.
-	args := []string{"--newline", "--no-playlist", "-c",
-		"-P", "home:" + outDir, "-P", "temp:" + tmpDir,
-		"-o", "%(title).120B [%(id)s].%(ext)s"}
+	args := []string{"--newline", "--no-playlist", "-c"}
+	// yt-dlp does its own transfers, so the token bucket never sees them;
+	// hand it the same cap instead.
+	if kb := e.Limiter.Rate() >> 10; kb > 0 {
+		args = append(args, "--limit-rate", fmt.Sprintf("%dK", kb))
+	}
+	args = append(args,
+		"-P", "home:"+outDir, "-P", "temp:"+tmpDir,
+		"-o", "%(title).120B [%(id)s].%(ext)s")
 	args = append(args, formatArgs(j.Format)...)
 	args = append(args, j.URL)
 	cmd := exec.CommandContext(ctx, bin, args...)

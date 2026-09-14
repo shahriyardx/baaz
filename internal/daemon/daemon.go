@@ -56,6 +56,7 @@ func NewManager(cfg *config.Config) *Manager {
 		subs:         map[chan *ipc.Snapshot]struct{}{},
 	}
 	m.eng = downloader.NewEngine(cfg.Segments, cfg.MinSplitSize)
+	m.eng.Limiter.SetRate(int64(cfg.SpeedLimitKB) << 10)
 	m.eng.OnProgress = func(j *downloader.Job) { m.persistThrottled(j) }
 
 	// Crash recovery: anything found mid-flight becomes paused; user resumes.
@@ -449,12 +450,13 @@ func (m *Manager) Snapshot() *ipc.Snapshot {
 	snap := &ipc.Snapshot{
 		Type: "snapshot", Jobs: []ipc.JobInfo{}, Recent: []ipc.JobInfo{},
 		Settings: ipc.Settings{
-			Intercept:   m.cfg.InterceptOn(),
-			Segments:    m.cfg.Segments,
-			MaxActive:   m.cfg.MaxActive,
-			MinSizeMB:   m.cfg.MinSizeMB,
-			DownloadDir: m.cfg.DownloadDir,
-			Categorize:  m.cfg.CategorizeOn(),
+			Intercept:    m.cfg.InterceptOn(),
+			Segments:     m.cfg.Segments,
+			MaxActive:    m.cfg.MaxActive,
+			MinSizeMB:    m.cfg.MinSizeMB,
+			DownloadDir:  m.cfg.DownloadDir,
+			Categorize:   m.cfg.CategorizeOn(),
+			SpeedLimitKB: m.cfg.SpeedLimitKB,
 		},
 	}
 	var recent []*downloader.Job
@@ -562,13 +564,20 @@ func (m *Manager) SetSettings(kv map[string]string) error {
 			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 				m.cfg.MinSizeMB = n
 			}
+		case "speed-limit", "speedLimitKB":
+			// 0 lifts the cap; anything above 1 GB/s is not a limit worth
+			// applying and is almost certainly a typo.
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 1<<20 {
+				m.cfg.SpeedLimitKB = n
+				m.eng.Limiter.SetRate(int64(n) << 10)
+			}
 		case "dir", "downloadDir":
 			if v != "" {
 				m.cfg.DownloadDir = v
 			}
 		default:
 			m.mu.Unlock()
-			return fmt.Errorf("unknown setting: %s (intercept|categorize|segments|max-active|min-size|dir)", k)
+			return fmt.Errorf("unknown setting: %s (intercept|categorize|segments|max-active|min-size|speed-limit|dir)", k)
 		}
 	}
 	err := m.cfg.Save()

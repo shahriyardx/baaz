@@ -714,6 +714,7 @@ Panel {
               { label: "Parallel downloads", key: "max-active", value: root.cfg.maxActive || 0, min: 1, max: 10, step: 1, unit: "" },
               { label: "Segments per file", key: "segments", value: root.cfg.segments || 0, min: 1, max: 16, step: 1, unit: "" },
               { label: "Min size to grab", key: "min-size", value: root.cfg.minSizeMB !== undefined ? root.cfg.minSizeMB : 0, min: 0, max: 500, step: 5, unit: " MB" },
+              { label: "Speed limit", key: "speed-limit", value: root.cfg.speedLimitKB || 0, min: 0, max: 20480, step: 512, unit: " KB/s", zero: "unlimited" },
             ]
 
             Item {
@@ -750,7 +751,9 @@ Panel {
 
                 Text {
                   anchors.verticalCenter: parent.verticalCenter
-                  text: cfgRow.modelData.value + cfgRow.modelData.unit
+                  text: (cfgRow.modelData.zero && cfgRow.modelData.value === 0)
+                        ? cfgRow.modelData.zero
+                        : cfgRow.modelData.value + cfgRow.modelData.unit
                   color: Color.foreground
                   font.family: Style.font.family
                   font.pixelSize: Style.font.caption

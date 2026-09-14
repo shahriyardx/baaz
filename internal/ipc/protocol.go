@@ -16,12 +16,13 @@ type Request struct {
 
 // Settings is the daemon-owned configuration exposed to every UI.
 type Settings struct {
-	Intercept   bool   `json:"intercept"`
-	Segments    int    `json:"segments"`
-	MaxActive   int    `json:"maxActive"`
-	MinSizeMB   int    `json:"minSizeMB"`
-	DownloadDir string `json:"downloadDir"`
-	Categorize  bool   `json:"categorize"`
+	Intercept    bool   `json:"intercept"`
+	Segments     int    `json:"segments"`
+	MaxActive    int    `json:"maxActive"`
+	MinSizeMB    int    `json:"minSizeMB"`
+	DownloadDir  string `json:"downloadDir"`
+	Categorize   bool   `json:"categorize"`
+	SpeedLimitKB int    `json:"speedLimitKB"` // total cap in KB/s; 0 = unlimited
 }
 
 // ErrRejected marks policy rejections (intercept off, below min size) so the

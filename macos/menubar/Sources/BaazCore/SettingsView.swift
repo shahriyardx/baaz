@@ -28,6 +28,31 @@ struct SettingsView: View {
                        value: model.settings.maxActive, range: 1...10, step: 1)
             StepperRow(label: "Segments per file", key: "segments",
                        value: model.settings.segments, range: 1...16, step: 1)
+            HStack {
+                Text("Speed limit").font(.callout)
+                Spacer()
+                Picker("", selection: Binding(
+                    get: { model.settings.speedLimitKB },
+                    set: { model.setConfig("speed-limit", String($0)) }
+                )) {
+                    Text("Unlimited").tag(0)
+                    Text("500 KB/s").tag(500)
+                    Text("1 MB/s").tag(1024)
+                    Text("2 MB/s").tag(2048)
+                    Text("5 MB/s").tag(5120)
+                    Text("10 MB/s").tag(10240)
+                    // A value set from the CLI that is not one of the presets
+                    // still needs somewhere to show.
+                    if ![0, 500, 1024, 2048, 5120, 10240].contains(model.settings.speedLimitKB) {
+                        Text("\(model.settings.speedLimitKB) KB/s")
+                            .tag(model.settings.speedLimitKB)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 130)
+            }
+
             StepperRow(label: "Min size to grab", key: "min-size",
                        value: model.settings.minSizeMB, range: 0...500, step: 5, unit: " MB")
 

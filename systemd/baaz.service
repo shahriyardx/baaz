@@ -1,6 +1,8 @@
-# Optional user unit. The daemon also auto-starts on first use, so this is
-# only for people who prefer systemd supervision:
-#   cp systemd/dm.service ~/.config/systemd/user/ && systemctl --user enable --now baaz
+# Optional Linux user unit. The daemon auto-starts on first use anyway, so
+# this is only for people who want systemd supervision and restart-on-failure.
+# (macOS has no systemd; there the app registers a login item instead.)
+# Install by hand with:
+#   cp systemd/baaz.service ~/.config/systemd/user/ && systemctl --user enable --now baaz
 [Unit]
 Description=baaz download manager daemon
 

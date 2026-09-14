@@ -58,6 +58,7 @@ type Job struct {
 	mu        sync.Mutex
 	cancel    context.CancelFunc
 	softPause atomic.Bool // pause by not reading; connection stays open
+	limiter   *Limiter    // shared throughput cap; nil means unlimited
 }
 
 // SetSoftPause suspends/continues a running single-stream transfer without
@@ -142,6 +143,9 @@ type Engine struct {
 	Client       *http.Client
 	Segments     int
 	MinSplitSize int64
+	// Limiter caps total throughput across every segment of every job. Nil
+	// or a zero rate means unlimited.
+	Limiter *Limiter
 	// OnProgress, if set, is invoked roughly once per second from the running
 	// job so the caller can persist state.
 	OnProgress func(*Job)
@@ -149,6 +153,7 @@ type Engine struct {
 
 func NewEngine(segments int, minSplit int64) *Engine {
 	return &Engine{
+		Limiter:      NewLimiter(0), // unlimited until configured
 		Client: &http.Client{
 			// No overall timeout: downloads are long-lived. Dial/TLS timeouts
 			// come from DefaultTransport.
@@ -167,6 +172,7 @@ func (e *Engine) Run(parent context.Context, j *Job) error {
 	j.mu.Lock()
 	j.cancel = cancel
 	j.State = StateActive
+	j.limiter = e.Limiter // one bucket for every segment of every job
 	j.mu.Unlock()
 	defer cancel()
 

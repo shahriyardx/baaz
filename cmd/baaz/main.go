@@ -37,7 +37,7 @@ Usage:
   baaz on | off                 enable / disable Chrome interception
   baaz config [KEY VALUE]       show or change settings
                                 keys: intercept categorize segments
-                                      max-active min-size dir
+                                      max-active min-size speed-limit dir
   baaz status [--json]          one-shot status (--json = snapshot schema)
   baaz watch                    stream JSON snapshots (for the bar widget)
   baaz daemon                   run the daemon in the foreground
@@ -229,9 +229,13 @@ func cmdConfig(args []string) error {
 		return fmt.Errorf("%s", resp.Error)
 	}
 	s := resp.Snapshot.Settings
-	fmt.Printf("intercept   %s\ncategorize  %s\nsegments    %d\nmax-active  %d\nmin-size    %d MB\ndir         %s\n",
+	limit := "unlimited"
+	if s.SpeedLimitKB > 0 {
+		limit = fmt.Sprintf("%d KB/s", s.SpeedLimitKB)
+	}
+	fmt.Printf("intercept   %s\ncategorize  %s\nsegments    %d\nmax-active  %d\nmin-size    %d MB\nspeed-limit %s\ndir         %s\n",
 		onOff(s.Intercept), onOff(s.Categorize),
-		s.Segments, s.MaxActive, s.MinSizeMB, s.DownloadDir)
+		s.Segments, s.MaxActive, s.MinSizeMB, limit, s.DownloadDir)
 	return nil
 }
 

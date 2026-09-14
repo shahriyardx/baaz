@@ -11,6 +11,7 @@ struct BaazSettings: Codable, Equatable {
     var minSizeMB = 0
     var downloadDir = ""
     var categorize = true
+    var speedLimitKB = 0
 
     init() {}
 
@@ -22,6 +23,7 @@ struct BaazSettings: Codable, Equatable {
         minSizeMB = try c.decodeIfPresent(Int.self, forKey: .minSizeMB) ?? 0
         downloadDir = try c.decodeIfPresent(String.self, forKey: .downloadDir) ?? ""
         categorize = try c.decodeIfPresent(Bool.self, forKey: .categorize) ?? true
+        speedLimitKB = try c.decodeIfPresent(Int.self, forKey: .speedLimitKB) ?? 0
     }
 }
 

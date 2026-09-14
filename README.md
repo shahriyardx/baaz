@@ -250,6 +250,7 @@ folders", and files land straight in `Downloads/`.
 Click the widget → the **gear icon**:
 
 - **where downloads are saved** — "Saving to" → **Change…** picks a folder
+- **speed limit** — cap total throughput so a download stops saturating your line
 - how many downloads run at the same time
 - how many pieces each file is split into
 - minimum file size baaz takes over (smaller files stay with Chrome)
@@ -336,7 +337,7 @@ baaz ls | status [--json] | watch
 baaz pause|resume|cancel|delete ID
 baaz clear
 baaz on | off
-baaz config [KEY VALUE]      # intercept categorize segments max-active min-size dir
+baaz config [KEY VALUE]      # intercept categorize segments max-active min-size speed-limit dir
 baaz daemon | install-chrome | install-bar | install-menubar
 ```
 
