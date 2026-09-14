@@ -26,7 +26,7 @@ cp -R "$here" "$stage/extension"
 # alongside the source would otherwise be shipped to every user, and counts
 # against the review as unused files.
 rm -f "$stage/extension/pack-store.sh"
-find "$stage/extension" \( -name '*.md' -o -name '.DS_Store' \) -delete
+find "$stage/extension" \( -name '*.md' -o -name '*.txt' -o -name '.DS_Store' \) -delete
 
 python3 - "$stage/extension/manifest.json" <<'PY'
 import json, sys, collections

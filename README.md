@@ -334,7 +334,8 @@ of that key pair, exported from the maintainer's keychain with
 `generate_keys -x`. Without the secret a release still publishes, but no
 appcast is generated and existing installs will not see it.
 
-**Publishing the extension.** `make extension-store` builds the upload. The
+**Publishing the extension.** `extension/PUBLISHING.txt` is the Web Store
+listing written out, ready to paste. `make extension-store` builds the upload. The
 only difference from what baaz ships is the `key` field: locally it pins the
 extension ID so unpacked loads, the packed CRX and the native-messaging
 manifest all agree, but the store ignores it, assigns an ID of its own, and

@@ -1,0 +1,206 @@
+PUBLISHING BAAZ TO THE CHROME WEB STORE
+=======================================
+
+Every field the listing asks for. Text between the ---- rules is meant to be
+copied straight into the console as it is. Anything marked [FILL IN] needs a
+decision or a URL only you have.
+
+Console: https://chrome.google.com/webstore/devconsole
+($5 one-time developer registration.)
+
+
+-----------------------------------------------------------------------
+1. BEFORE YOU UPLOAD
+-----------------------------------------------------------------------
+
+[ ] Bump "version" in extension/manifest.json. CI fails the release if it
+    does not match the git tag. It is 0.1.6 now, so the next tag is v0.1.6.
+
+[ ] Run:  make extension-store
+    Produces build/baaz-extension-store.zip with the "key" field stripped.
+    The store assigns its own ID and rejects a package carrying one.
+
+[ ] Put the privacy policy at a public URL (see PRIVACY.md in the repo root)
+    and note the address in section 3.
+
+[ ] Take at least one screenshot, 1280x800 or 640x400, PNG or JPEG.
+
+
+-----------------------------------------------------------------------
+2. STORE LISTING
+-----------------------------------------------------------------------
+
+NAME
+----
+Baaz
+----
+
+SUMMARY  (132 characters maximum; this one is 92)
+----
+Faster downloads in Chrome - files are split into parts, and videos download with one click.
+----
+
+CATEGORY
+    Workflow & Planning        (Productivity also fits)
+
+LANGUAGE
+    English
+
+WEBSITE
+    https://github.com/shahriyardx/baaz
+
+SUPPORT URL
+    https://github.com/shahriyardx/baaz/issues
+
+DESCRIPTION
+----
+Baaz makes Chrome's downloads faster and gives you control over them.
+
+FASTER DOWNLOADS
+Large files are split into as many as 8 parts and fetched at once, rather
+than through a single connection.
+
+PAUSE AND RESUME
+Downloads survive a pause, a reboot, or a crash, and pick up where they
+stopped instead of starting over.
+
+VIDEOS IN ONE CLICK
+Hover a video on YouTube, Facebook, TikTok, Instagram, X or Vimeo and click
+Download. Pick a quality, or take the audio only as an mp3.
+
+TIDY FOLDERS
+Files sort themselves into Videos, Music, Documents, Programs and so on.
+
+NOTHING LEAVES YOUR COMPUTER
+No account, no sign-in, no server. Baaz talks only to the companion app
+running on your own machine, and the extension sends nothing anywhere else.
+
+REQUIRES THE FREE BAAZ APP
+The app for macOS or Linux does the actual downloading:
+https://github.com/shahriyardx/baaz
+
+Open source, MIT licensed.
+----
+
+SCREENSHOTS TO TAKE
+    1. The popup open, with a download running.
+    2. The Download button hovering over a video, quality menu open.
+    3. The Baaz app window with several downloads and the parts view open.
+
+    A listing is rejected if a screenshot shows page content you do not have
+    rights to. Use your own pages, or public licence-free video.
+
+
+-----------------------------------------------------------------------
+3. PRIVACY PRACTICES
+-----------------------------------------------------------------------
+
+This section decides how long review takes. Every answer below is true of
+the code as it stands. Check them again if the extension changes.
+
+SINGLE PURPOSE
+----
+Baaz hands downloads started in Chrome to the Baaz application on the same
+computer, which downloads them faster and can pause and resume them.
+----
+
+PERMISSION JUSTIFICATIONS
+Paste each block against its permission.
+
+downloads
+----
+Baaz needs to see a download as Chrome starts it, and cancel Chrome's own
+copy once the Baaz app has taken it over. Without this the file would
+download twice.
+----
+
+nativeMessaging
+----
+The Baaz application runs on the user's computer and does the downloading.
+This permission is how the extension hands it the link. It is the
+extension's entire purpose.
+----
+
+cookies
+----
+Many downloads are behind a login. The cookies for the download's own URL
+are read and passed to the Baaz app so the file downloads as the signed-in
+user, exactly as Chrome would have. Cookies are read only for the URL being
+downloaded, are never stored, and are never sent anywhere except the app on
+the same computer.
+----
+
+storage
+----
+Stores one setting: whether the user has the extension switched on. Nothing
+else is kept.
+----
+
+Host permission <all_urls>
+----
+A download can start from any site, and the Download button has to be able
+to appear over a video on any site. The extension reads the page only to
+find the video's address; it does not read or transmit page content.
+----
+
+REMOTE CODE
+    Answer: No.
+    Every file the extension runs is inside the package. Nothing is fetched
+    or evaluated at runtime.
+
+DATA USAGE - TICK ONLY THESE TWO
+    [x] Authentication information
+        Cookies for the URL being downloaded, used solely to fetch a file
+        the user is entitled to.
+    [x] Website content
+        The address of a video on the current page, used solely to download
+        it.
+
+    Leave everything else unticked: no personally identifiable information,
+    no health, financial, location or personal communications data, and no
+    activity tracking.
+
+CERTIFICATIONS - all three are true, tick all three
+    [x] I do not sell or transfer user data to third parties, apart from the
+        approved use cases.
+    [x] I do not use or transfer user data for purposes unrelated to my
+        item's single purpose.
+    [x] I do not use or transfer user data to determine creditworthiness or
+        for lending purposes.
+
+PRIVACY POLICY URL
+    [FILL IN]  A public URL for PRIVACY.md. The simplest option:
+    https://github.com/shahriyardx/baaz/blob/master/PRIVACY.md
+
+
+-----------------------------------------------------------------------
+4. AFTER THE FIRST UPLOAD
+-----------------------------------------------------------------------
+
+The store assigns the extension ID. Until both steps are done, a copy
+installed from the store cannot talk to the app, because the app only
+accepts messages from the ID it knows.
+
+[ ] In the dashboard, copy the item's public key into
+    extension/manifest.json as "key". Unpacked loads and the packed CRX then
+    share the published ID.
+
+[ ] Set defaultExtID in cmd/baaz/main.go to the assigned ID, so the
+    native-messaging manifest's allowed_origins matches.
+
+[ ] Reinstall and confirm the popup shows "connected".
+
+The key committed in keys/ only ever pinned the local ID. Generate a fresh
+one if the extension is ever self-hosted again.
+
+
+-----------------------------------------------------------------------
+5. WHAT TO EXPECT
+-----------------------------------------------------------------------
+
+A first submission using nativeMessaging, cookies and <all_urls> is reviewed
+by hand. Days is normal; weeks happens. Later updates are usually quicker.
+
+If it is rejected, the reason is nearly always a permission justification
+that does not explain why the feature cannot work without it. Rewrite the
+justification in those terms rather than restating what the permission does.
