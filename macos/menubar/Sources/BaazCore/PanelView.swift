@@ -79,8 +79,10 @@ public struct PanelView: View {
             header
             Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    body_
+                BaazGlassContainer(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        body_
+                    }
                 }
                 .padding(12)
                 .frame(width: width, alignment: .leading)
@@ -261,12 +263,9 @@ struct LiveJobRow: View {
                 SegmentBars(job: job)
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(hovering ? Color.primary.opacity(0.06) : .clear)
-        )
+        .baazGlassOnHover(hovering, in: RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }
     }
 
@@ -346,12 +345,9 @@ struct RecentJobRow: View {
             }
             .opacity(hovering ? 1 : 0)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(hovering ? Color.primary.opacity(0.06) : .clear)
-        )
+        .baazGlassOnHover(hovering, in: RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }
     }
 }

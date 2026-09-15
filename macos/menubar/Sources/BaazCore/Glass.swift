@@ -42,6 +42,23 @@ public extension View {
     }
 }
 
+public extension View {
+    /// Glass that appears on hover, for rows that are otherwise flat. Before
+    /// macOS 26 this is the faint tint it always was.
+    @ViewBuilder
+    func baazGlassOnHover(_ hovering: Bool, in shape: some Shape) -> some View {
+        if #available(macOS 26.0, *) {
+            if hovering {
+                glassEffect(.regular, in: shape)
+            } else {
+                self
+            }
+        } else {
+            background(shape.fill(hovering ? Color.primary.opacity(0.06) : .clear))
+        }
+    }
+}
+
 /// Wraps a set of glass surfaces so they can merge. Renders its content
 /// unchanged before macOS 26.
 public struct BaazGlassContainer<Content: View>: View {
