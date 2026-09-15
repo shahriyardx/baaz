@@ -194,19 +194,33 @@ func (e *Engine) runYtdlp(ctx context.Context, j *Job) error {
 		break
 	}
 
-	j.mu.Lock()
-	if j.Total > 0 {
-		atomic.StoreInt64(&seg.Written, j.Total)
-	}
-	if lastPath != "" {
+	if lastPath != "" && strings.HasPrefix(lastPath, tmpDir) {
 		// Never leave FinalPath pointing into the hidden temp dir: if the
 		// announced path lives there, the finished file is its basename in
 		// the real output dir.
-		if strings.HasPrefix(lastPath, tmpDir) {
-			if moved := filepath.Join(outDir, filepath.Base(lastPath)); fileExists(moved) {
-				lastPath = moved
-			}
+		if moved := filepath.Join(outDir, filepath.Base(lastPath)); fileExists(moved) {
+			lastPath = moved
 		}
+	}
+
+	// Take the size from the finished file rather than from the progress
+	// lines. yt-dlp prints no progress at all when the file was already
+	// downloaded, which left the job showing "0B" next to a green tick; and
+	// where it does print, the figure is the largest single stream, not the
+	// merged result.
+	size := j.Total
+	if lastPath != "" {
+		if st, err := os.Stat(lastPath); err == nil && st.Size() > 0 {
+			size = st.Size()
+		}
+	}
+
+	j.mu.Lock()
+	if size > 0 {
+		j.Total = size
+		atomic.StoreInt64(&seg.Written, size)
+	}
+	if lastPath != "" {
 		j.FinalPath = lastPath
 	}
 	j.mu.Unlock()

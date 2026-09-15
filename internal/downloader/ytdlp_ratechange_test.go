@@ -232,3 +232,62 @@ exit 0
 		t.Errorf("merge must not be restarted, got %d runs:\n%s", len(got), strings.Join(got, "\n"))
 	}
 }
+
+// yt-dlp prints no progress lines at all when the file is already on disk,
+// which left a finished video showing "0B" beside a green tick.
+func TestFinishedMediaTakesItsSizeFromTheFile(t *testing.T) {
+	dir := t.TempDir()
+	out := t.TempDir()
+	target := filepath.Join(out, "already-there.mp4")
+	if err := os.WriteFile(target, make([]byte, 1234567), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\n" +
+		"echo '[download] " + target + " has already been downloaded'\n" +
+		"echo '[download] Destination: " + target + "'\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(dir, "yt-dlp"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	e := NewEngine(1, 1<<30)
+	j := &Job{URL: "https://youtube.com/watch?v=x", Dir: out, Kind: KindMedia}
+	if err := e.runYtdlp(context.Background(), j); err != nil {
+		t.Fatalf("job failed: %v", err)
+	}
+	if j.Total != 1234567 {
+		t.Errorf("Total = %d, want the file's 1234567 bytes", j.Total)
+	}
+	if got := j.Done(); got != 1234567 {
+		t.Errorf("Done() = %d, want 1234567 — progress must match the size", got)
+	}
+}
+
+// Where yt-dlp does report progress, the finished file is still the honest
+// size: the progress figure is the largest single stream, not the merge.
+func TestFinishedMediaPrefersTheFileOverProgressTotals(t *testing.T) {
+	dir := t.TempDir()
+	out := t.TempDir()
+	target := filepath.Join(out, "merged.mp4")
+	if err := os.WriteFile(target, make([]byte, 9_000_000), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\n" +
+		"echo '[download] Destination: " + target + "'\n" +
+		"echo '[download] 100.0% of 5.00MiB at 1.00MiB/s ETA 00:00'\n" +
+		"exit 0\n"
+	if err := os.WriteFile(filepath.Join(dir, "yt-dlp"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	e := NewEngine(1, 1<<30)
+	j := &Job{URL: "https://youtube.com/watch?v=x", Dir: out, Kind: KindMedia}
+	if err := e.runYtdlp(context.Background(), j); err != nil {
+		t.Fatalf("job failed: %v", err)
+	}
+	if j.Total != 9_000_000 {
+		t.Errorf("Total = %d, want the merged file's 9000000 bytes", j.Total)
+	}
+}
