@@ -1,6 +1,21 @@
 import AppKit
 import SwiftUI
 
+/// Size the Settings window opens at. Kept next to the view so the two
+/// cannot drift apart: a window shorter than its content clips the last row.
+public enum SettingsWindowMetrics {
+    public static let width: CGFloat = 520
+    public static let defaultHeight: CGFloat = 450
+    /// Everything in the window that is not tab content: the title bar, the
+    /// tab strip, and the padding above and below. Measured against the real
+    /// window, not guessed.
+    public static let chromeHeight: CGFloat = 106
+    /// Floor for the tab content. defaultSize alone is not enough — macOS
+    /// restores whatever size the window was last left at, so an older,
+    /// shorter frame would keep clipping the tallest tab forever.
+    public static let contentMinHeight: CGFloat = defaultHeight - chromeHeight
+}
+
 /// The app's Settings window (⌘,).
 ///
 /// Every control writes straight through to the daemon, which owns the
@@ -19,11 +34,12 @@ public struct SettingsWindow: View {
             BrowserSettings().tabItem { Label("Browser", systemImage: "globe") }
         }
         .frame(width: 480)
+        .frame(minHeight: SettingsWindowMetrics.contentMinHeight)
         .padding(20)
     }
 }
 
-private struct GeneralSettings: View {
+struct GeneralSettings: View {
     @EnvironmentObject var model: DownloadsModel
     @State private var opensAtLogin = Setup.opensAtLogin
 
@@ -51,7 +67,7 @@ private struct GeneralSettings: View {
             }
 
             Section {
-                Toggle("Open baaz at login", isOn: Binding(
+                Toggle("Open Baaz at login", isOn: Binding(
                     get: { opensAtLogin },
                     set: { opensAtLogin = Setup.setOpensAtLogin($0) }
                 ))
@@ -63,7 +79,7 @@ private struct GeneralSettings: View {
     }
 }
 
-private struct TransferSettings: View {
+struct TransferSettings: View {
     @EnvironmentObject var model: DownloadsModel
 
     private let presets: [(String, Int)] = [
@@ -93,7 +109,7 @@ private struct TransferSettings: View {
                           key: "max-active", value: model.settings.maxActive, in: 1...10)
                 numberRow("Parts per file",
                           key: "segments", value: model.settings.segments, in: 1...32)
-                Text("A file is fetched as this many pieces at once. More is not always faster, and servers without range support always get one.")
+                Text("A file is pulled down in this many pieces at once. More is not always faster, and some sites only ever allow one.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -131,7 +147,7 @@ private struct TransferSettings: View {
     }
 }
 
-private struct BrowserSettings: View {
+struct BrowserSettings: View {
     @EnvironmentObject var model: DownloadsModel
     @State private var reran = false
 

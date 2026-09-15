@@ -13,7 +13,7 @@ public enum FalconIcon {
     public static let menuBar: NSImage = {
         let image = render(height: 16)
         image.isTemplate = true
-        image.accessibilityDescription = "baaz"
+        image.accessibilityDescription = "Baaz"
         return image
     }()
 

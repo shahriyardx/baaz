@@ -98,21 +98,26 @@ struct Job: Codable, Equatable, Identifiable {
     /// drawing a "parts" display with one part in it.
     var isSplit: Bool { segments.count > 1 }
 
+    /// "1 part" / "3 parts" — a count with the right noun on it.
+    var partsLabel: String {
+        segments.count == 1 ? "1 part" : "\(segments.count) parts"
+    }
+
     /// Why a download ended up as a single part. There are three different
-    /// reasons and they are not interchangeable: blaming the server for a
-    /// YouTube download is simply wrong, since yt-dlp never offered to split
-    /// it in the first place, and the "parts" setting does not apply to it.
+    /// reasons and they are not interchangeable: blaming the site for a
+    /// YouTube download is simply wrong, since video downloads are never
+    /// split in the first place, and the "parts" setting does not apply.
     var singlePartReason: String {
-        if isMedia { return "1 part — yt-dlp fetches this one itself" }
-        if noRange { return "1 part — this server doesn't support splitting" }
+        if isMedia { return "1 part — video sites are fetched whole" }
+        if noRange { return "1 part — this site doesn't allow splitting" }
         return "1 part — too small to be worth splitting"
     }
 
     /// The same explanation, phrased for the inspector's "Parts" row, where
     /// the label already supplies the word.
     var singlePartDetail: String {
-        if isMedia { return "1 — yt-dlp fetches this one itself" }
-        if noRange { return "1 — this server does not support splitting" }
+        if isMedia { return "1 — video sites are fetched whole" }
+        if noRange { return "1 — this site does not allow splitting" }
         return "1 — too small to be worth splitting"
     }
 

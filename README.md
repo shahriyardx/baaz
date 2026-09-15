@@ -1,144 +1,224 @@
-# baaz
+<p align="center">
+  <img src="docs/images/banner@2x.png" alt="Baaz" width="100%">
+</p>
 
-**A fast download manager for Linux and macOS.** baaz (বাজ — "falcon" in
-Bengali) takes over your Chrome downloads and pulls files up to 8× faster by
-downloading several pieces at once. It also downloads videos from YouTube, Facebook,
-TikTok and more with one click.
+<p align="center">
+  <a href="https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg"><img alt="Download for macOS" src="https://img.shields.io/badge/Download-macOS%20·%20Baaz.dmg-2563eb?style=flat-square"></a>
+  <a href="https://github.com/shahriyardx/baaz/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/shahriyardx/baaz?style=flat-square&color=555"></a>
+  <a href="https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat-square"></a>
+  <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-555?style=flat-square">
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-555?style=flat-square"></a>
+</p>
 
-- **Faster downloads** — big files split into up to 8 parts, downloaded together
-- **Pause and resume** — even after a reboot or crash, downloads continue where they stopped
-- **Video download button** — hover any video on YouTube, Facebook, etc. and click Download; pick a quality or audio-only mp3
-- **Tidy folders** — files sort themselves into Videos, Music, Documents, Programs and so on inside your Downloads folder
-- **Desktop notifications** — know when a download starts, finishes, or fails
-- **A real app on macOS** — a window with every download, add links by hand,
-  pause and resume anything, watch the parts arrive
-- **Always-visible widget** — live speed and progress in your Omarchy bar (Linux)
-  or your menu bar (macOS), no window to open
+**Baaz takes over your Chrome downloads and finishes them in a fraction of
+the time.** It splits each file into pieces and pulls them all at once, so a
+download that crawled at one connection's pace now uses the whole line. It
+also saves video from YouTube, Facebook, TikTok and more, with one click.
+
+*baaz — বাজ — is Bengali for falcon.*
+
+---
+
+## What you get
+
+- **Much faster downloads.** A large file arrives in up to 8 pieces at once
+  instead of one, then gets stitched back together.
+- **Pause and resume that actually works.** Close the app, reboot, lose
+  Wi-Fi — a download picks up where it stopped instead of starting over.
+- **One-click video saving.** Hover any video on YouTube, Facebook, TikTok,
+  Instagram, X or Vimeo and a Download button appears. Pick a quality, or
+  grab just the audio as an mp3.
+- **A real Mac app.** Every download in one window, with search, filters, a
+  details panel, and drag-free installing.
+- **Always in your menu bar.** Live speed and progress next to the clock,
+  and a click away from pausing anything.
+- **Tidy folders.** Files sort themselves into Videos, Music, Documents,
+  Programs and so on — or don't, if you'd rather they didn't.
+- **Updates itself.** Baaz checks daily, tells you when there's a new
+  version, and installs it in place.
+- **Nothing else to install.** The disk image is the whole thing.
 
 ---
 
 ## Install
 
-### Arch Linux / Omarchy
+### macOS
+
+1. Download **[Baaz.dmg][dmg]**.
+2. Drag **Baaz** onto **Applications**.
+3. Open it. The first time, **right-click the app → Open** — Baaz isn't
+   notarized by Apple yet, so a plain double-click is refused once.
+
+A falcon appears in your menu bar, and that's the install finished. Opening
+the app connects Chrome and sets Baaz to start with your Mac.
+
+Then install the Chrome extension: **[Baaz on the Chrome Web Store][ext]**,
+and restart Chrome.
+
+Works on macOS 13 (Ventura) and newer, on both Intel and Apple Silicon.
+
+[dmg]: https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
+[ext]: https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl
+
+### Linux
+
+**Arch / Omarchy:**
 
 ```
 yay -S baaz
 ```
 
-### macOS
-
-Download **[Baaz.dmg][dmg]**, drag **Baaz** onto Applications, and open it.
-
-A falcon appears in your menu bar. That's the whole install — opening the app
-connects Chrome and sets itself to open at login.
-
-> On first open, **right-click the app → Open**. baaz isn't notarized yet, so
-> a plain double-click is refused once.
-
-macOS 13 (Ventura) or newer, Intel or Apple Silicon. The app will point you
-at the Chrome extension, which installs from the Web Store in one click.
-
-[dmg]: https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
-
-### Any other Linux
-
-Paste this into a terminal:
+**Anything else** — paste this into a terminal:
 
 ```
 curl -fsSL https://github.com/shahriyardx/baaz/releases/latest/download/install.sh | bash
 ```
 
-That downloads baaz into your home folder, connects it to Chrome, and starts
-the widget. No compiler, nothing to build. The only thing it may ask to
-install is yt-dlp and ffmpeg, for video downloads — and only if you say yes.
+Run it as yourself, **not** with `sudo`. It asks for your password once, at
+the start, and only for the Chrome step.
 
-Run it as yourself — **not** with `sudo`. It asks for your password once, at
-the start, and uses it only for the Chrome step; everything else belongs to
-your own account.
-
-The installer is Linux-only; on macOS it points you at the disk image and
-stops, since the app there carries the CLI and does its own setup.
-
----
-
-## Set up Chrome (one time)
-
-Install the extension: **[Baaz on the Chrome Web Store][ext]**, then restart
-Chrome. That is the whole browser side on every platform.
-
-[ext]: https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl
-
-On **macOS** the app connects Chrome to Baaz by itself when you first open
-it. On **Linux**, run this once:
+Then install the extension from the **[Chrome Web Store][ext]**, restart
+Chrome, and run this once so Chrome can talk to Baaz:
 
 ```
 sudo baaz install-chrome
 ```
 
-It writes the native-messaging manifest that lets the extension reach the
-daemon, and turns off Chrome's "ask where to save" dialog.
-
-That's it. From now on, when you download something in Chrome, Baaz takes it.
-
-**Video downloads from YouTube etc.** need yt-dlp and ffmpeg. On **macOS**
-baaz fetches both itself the first time you download a video — nothing to
-install, the first one just takes a little longer while it does. On Linux,
-use your package manager (the installer offers to, and a video download that
-finds them missing says exactly what to run):
-
-```
-sudo pacman -S yt-dlp ffmpeg        # Arch / Omarchy
-sudo apt install yt-dlp ffmpeg      # Ubuntu / Debian
-sudo dnf install yt-dlp ffmpeg      # Fedora
-brew install yt-dlp ffmpeg          # macOS
-```
-
-**Optional — the Omarchy bar widget (Linux):**
+For the Omarchy bar widget:
 
 ```
 baaz install-bar
 ```
 
+Video downloads on Linux need `yt-dlp` and `ffmpeg`; the installer offers to
+get them, or use your package manager. On macOS, Baaz fetches both itself the
+first time you save a video — the first one just takes a little longer.
+
+---
+
+## Using it
+
+Mostly, you don't.
+
+**Downloading a file** — click any download link in Chrome the way you always
+have. Baaz picks it up, shows a notification, and the finished file lands in
+your Downloads folder.
+
+**Saving a video** — move your mouse over a video, click the **Download**
+button that appears, and choose a size. The menu only lists sizes that video
+actually has. Most sizes up to 1080p play in anything; larger ones are
+labelled with their video format, because some older players won't open them.
+There's an **Audio only** option for mp3.
+
+**Watching progress** — the menu bar shows speed and percent while anything
+is downloading. Click it for the list, with pause, resume and cancel. Click a
+finished file to reveal it in Finder.
+
+**Turning it off** — click the falcon and flip the switch. Chrome goes back
+to downloading on its own; flip it again to hand back over.
+
+---
+
+## The app
+
+Open Baaz from the Dock, or click the falcon and choose **Baaz Downloads**.
+
+- Every download in one list, filtered by **Downloading**, **Paused**,
+  **Completed** and **Failed**, with a search box.
+- **＋** or <kbd>⌘N</kbd> adds a link by hand. If you've just copied a URL
+  it's filled in for you, and video pages get a quality picker.
+- Pause, resume or cancel one download, or all of them at once
+  (<kbd>⌘.</kbd> and <kbd>⇧⌘R</kbd>).
+- Click **parts** on a running download to watch the pieces arrive.
+- Click any download for a details panel: size, speed, time left, where it's
+  saving, the original link, and when it started and finished.
+- Right-click a finished download to reveal it in Finder or delete it.
+
+Closing the window doesn't quit Baaz — downloads keep running and the falcon
+stays in the menu bar. Quit from the menu, or <kbd>⌘Q</kbd>.
+
+---
+
+## Where files go
+
+Into your Downloads folder, sorted for you:
+
+```
+Downloads/Videos/        films and clips
+Downloads/Music/         mp3 and other audio
+Downloads/Documents/     pdfs, documents, spreadsheets
+Downloads/Programs/      installers and apps
+Downloads/Compressed/    zip, rar, disk images
+Downloads/Images/        pictures
+Downloads/Other/         everything else
+```
+
+Prefer them all in one place? Turn off **Sort into category folders** in
+Settings, and everything lands straight in `Downloads/`.
+
+---
+
+## Settings
+
+Press <kbd>⌘,</kbd>, or click the gear in the menu bar panel.
+
+**General** — where downloads are saved, whether to sort into folders, and
+whether Baaz opens at login.
+
+**Downloads** — a speed limit for everything at once, how many downloads run
+together, how many pieces each file is split into, and the size below which
+Chrome keeps its own downloads.
+
+**Browser** — turn the Chrome takeover on or off, and re-run the Chrome
+connection if it ever stops working.
+
+Changing the speed limit takes effect immediately, including on downloads
+already running.
+
 ---
 
 ## Updating
 
-**macOS** updates itself. baaz checks once a day and offers the update; you
-click Install and it downloads, replaces itself and relaunches — no dragging,
-no Gatekeeper prompt. **baaz → Check for Updates…** does it on demand.
+**macOS updates itself.** Baaz checks once a day, tells you when there's a
+newer version, and installs it when you say so — no dragging, no security
+prompt. **Baaz → Check for Updates…** does it on demand. Every update is
+signed, and one that doesn't match Baaz's signature is refused.
 
-Updates are signed with an EdDSA key and refused if the signature does not
-match the one built into the app, so a tampered build cannot install itself.
+**Linux:**
 
 ```
-yay -Syu baaz            # Arch / Omarchy
+yay -Syu baaz                  # Arch / Omarchy
 ```
 
-Other Linux and macOS: run the same curl line from Install again — it fetches
-the latest version.
+On other distributions, run the install command again — it fetches the
+current version.
 
-The extension updates itself from the Chrome Web Store, and on macOS the app
-updates itself. Nothing to do.
+The Chrome extension updates itself.
+
+---
+
+## Something's wrong?
+
+| What you see | What to do |
+|---|---|
+| No falcon in the menu bar | Open Baaz from Applications. If your menu bar is full, macOS hides icons — quit something else or widen it. |
+| "Baaz cannot be opened because Apple cannot check it" | Right-click Baaz in **Applications** → **Open** → **Open**. Once only. |
+| The menu bar panel says "starting…" and stays there | Click the falcon → **Quit**, then open Baaz again. If it persists, reinstall from the disk image. |
+| Chrome downloads files itself instead | Check the extension is switched on at `chrome://extensions`. Then **Settings → Browser → Re-run Chrome Setup** on macOS, or `sudo baaz install-chrome` on Linux, and restart Chrome. |
+| Video downloads fail | On macOS this usually means Baaz couldn't reach GitHub to fetch its video tools — check your connection and try again. On Linux, install `yt-dlp` and `ffmpeg`. |
+| A download seems stuck | Pause it, then resume. It carries on from where it stopped. |
+| I want the file *and* the list entry gone | Hover the entry and click the trash icon. **Clear all** only empties the list; files stay. |
+| No notifications | The first one asks permission. Otherwise allow them in System Settings → Notifications. |
+| Chrome still asks where to save | Re-run the Chrome setup above, then restart Chrome. |
 
 ---
 
 ## Uninstall
 
-### Linux
-
-```
-pkill -f 'baaz daemon'
-rm -f  ~/.local/bin/baaz
-rm -rf ~/.config/omarchy/plugins/shahriyardx.baaz
-rm -f  ~/.config/google-chrome/NativeMessagingHosts/com.shahriyar.baaz.json
-sudo rm -f /usr/share/google-chrome/extensions/*.json /etc/opt/chrome/policies/managed/baaz-no-save-prompt.json
-```
-
-(Arch / Omarchy: `yay -R baaz` instead of the first two lines.)
-
 ### macOS
 
-Deleting Baaz.app also removes its login item. The rest:
+Dragging **Baaz.app** to the Trash removes the app and stops it opening at
+login. To clear the rest:
 
 ```
 pkill -f BaazMenuBar; pkill -f 'baaz daemon'
@@ -148,115 +228,23 @@ rm -f  "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com
 defaults delete com.google.Chrome PromptForDownloadLocation
 ```
 
-On both: remove the extension at `chrome://extensions`, and restart Chrome.
-
-Your downloads are never touched. To also drop baaz's own settings and
-download history, delete `~/.config/baaz` and `~/.local/share/baaz` on Linux,
-or `~/Library/Application Support/baaz` on macOS.
-
----
-
-## How to use it
-
-You mostly don't have to do anything:
-
-- **Normal downloads**: click any download link in Chrome like you always do.
-  baaz grabs it, a notification pops up, and the file appears in
-  `Downloads/<category>/` when done.
-- **Videos**: move your mouse over a video on YouTube, Facebook, TikTok,
-  Instagram, X or Vimeo. A **Download** button appears on the video. Click
-  it, pick a quality (or "Audio only" for mp3), done.
-  The menu lists what that video actually has. Up to 1080p is normally H.264,
-  which every player opens; larger sizes are usually VP9 or AV1 and are
-  labelled as such, since older players refuse them.
-- **Watch progress**: on Omarchy look at your bar, on macOS look at the menu
-  bar near the clock — it shows speed and percent while anything downloads.
-  Click it for the full list with pause, resume, and cancel buttons. Click a
-  finished item to show it in Finder (macOS) or open its folder (Linux).
-- **Turn baaz off**: click the widget → flip the switch at the top —
-  Chrome goes back to downloading by itself. Flip it again to return.
-  (The extension icon in Chrome shows the same on/off state.)
-
-## The app (macOS)
-
-Open Baaz from the Dock — or click the falcon and choose **Open baaz** — for
-the full window:
-
-- every download in one list, filtered by **Downloading / Paused / Completed /
-  Failed**, with a search box
-- **＋** or <kbd>⌘N</kbd> to add a link. The URL is filled in from your
-  clipboard if you just copied one, and video pages get a quality picker
-- pause, resume and cancel per download, or **Pause All** / **Resume All**
-  (<kbd>⌘.</kbd> and <kbd>⇧⌘R</kbd>)
-- click **parts** on a running download to watch the file arrive in up to 8
-  pieces at once
-- click a download for a **details panel** on the right: size, speed, time
-  left, where it saved, the source link, when it started and finished, and
-  the live parts — with Open / Show in Finder / pause / cancel
-- right-click a finished one to show it in Finder or delete it
-
-**Settings** live under <kbd>⌘,</kbd> (baaz → Settings…), in three tabs:
-
-- **General** — where downloads are saved, category folders, open at login
-- **Downloads** — speed limit, how many at once, parts per file, the size
-  below which Chrome keeps its own downloads
-- **Browser** — Chrome takeover on/off, and the extension folder with a
-  button to re-run the Chrome setup
-
-The gear in the menu bar panel opens the same window.
-
-Closing the window doesn't quit — downloads keep running and the falcon stays
-in the menu bar. Quit from the menu or <kbd>⌘Q</kbd>.
-
-## Where do my files go?
-
-Straight into your Downloads folder — or wherever you point baaz instead —
-sorted automatically:
+### Linux
 
 ```
-Downloads/Videos/        movies, clips
-Downloads/Music/         mp3 and audio
-Downloads/Documents/     pdf, docs, spreadsheets
-Downloads/Programs/      installers and packages
-Downloads/Compressed/    zip, rar, iso
-Downloads/Images/        pictures
-Downloads/Other/         everything else
+pkill -f 'baaz daemon'
+rm -f  ~/.local/bin/baaz
+rm -rf ~/.config/omarchy/plugins/shahriyardx.baaz
+rm -f  ~/.config/google-chrome/NativeMessagingHosts/com.shahriyar.baaz.json
+sudo rm -f /etc/opt/chrome/policies/managed/baaz-no-save-prompt.json
 ```
 
-Don't like sorting? Turn it off in Settings → General → "Sort into category
-folders", and files land straight in `Downloads/`.
+On Arch / Omarchy, `yay -R baaz` replaces the first two lines.
 
-## Settings
+On both, remove the extension at `chrome://extensions` and restart Chrome.
 
-Settings (<kbd>⌘,</kbd>, or the gear in the menu bar panel):
-
-- **where downloads are saved** — "Saving to" → **Change…** picks a folder
-- **speed limit** — cap total throughput so a download stops saturating your line
-- how many downloads run at the same time
-- how many pieces each file is split into
-- minimum file size baaz takes over (smaller files stay with Chrome)
-- category folder sorting on/off
-
-Category folders are created inside whatever you pick. (On Linux the same
-setting is `baaz config dir /path/to/folder`.)
-
-The switch next to the gear turns Chrome takeover on/off entirely.
-
-## Something's wrong?
-
-| Problem | Fix |
-|---|---|
-| Extension popup says "daemon offline" | Run any baaz command once (e.g. `baaz ls`) — it starts itself. Then reopen the popup. |
-| Video downloads fail | Linux: install `yt-dlp` and `ffmpeg`. macOS: baaz fetches them itself, so this usually means it could not reach GitHub — check the network and retry the download. An existing Homebrew or MacPorts copy is used as-is. |
-| A download is stuck | Widget → pause it, then resume. It continues from where it stopped. |
-| I want a file AND its list entry gone | Hover the entry in the widget → trash icon. "Clear all" only empties the list, files stay. |
-| Chrome still shows its own save dialog | Run `sudo baaz install-chrome` again, then `chrome://restart`. |
-| Extension stopped working | Check it is enabled at `chrome://extensions`. If downloads still go to Chrome, use **Settings → Browser → Re-run Chrome Setup** (macOS) or `sudo baaz install-chrome` (Linux), then restart Chrome. |
-| macOS: no icon in the menu bar | Open Baaz from Applications. If the bar is full, macOS hides icons — widen it or quit another one. |
-| macOS: no notifications | First banner asks for permission. Otherwise allow **Script Editor** in System Settings → Notifications. |
-| macOS: "cannot be opened because Apple cannot check it" | Baaz.app isn't notarized yet. Right-click it in **Applications** → **Open** → **Open**, once. |
-| macOS: panel says "daemon starting…" and stays there | Quit Baaz (falcon → Quit) and open it again. If it persists, reinstall from the disk image. |
-| macOS: how do I quit? | Click the falcon → **Quit**, or ⌘Q. To stop it opening at login: **Settings → General → Open baaz at login**. |
+**Your downloaded files are never touched.** To also drop Baaz's settings and
+history, delete `~/Library/Application Support/baaz` on macOS, or
+`~/.config/baaz` and `~/.local/share/baaz` on Linux.
 
 ---
 
@@ -267,8 +255,9 @@ The switch next to the gear turns Chrome takeover on/off entirely.
 
 Requires Go 1.27+ (see `go.mod`). `make install` builds and installs to
 `~/.local/bin/baaz`.
-On macOS, `make macos-dmg` builds the shippable `Baaz.dmg` (needs Xcode):
-a universal `Baaz.app` with the universal `baaz` CLI inside it at
+
+On macOS, `make macos-dmg` builds the shippable `Baaz.dmg` (needs Xcode): a
+universal `Baaz.app` with the universal `baaz` CLI inside it at
 `Contents/Resources/baaz`. The app copies that CLI to `~/.local/bin` on first
 launch, runs `install-chrome`, and registers itself with `SMAppService` — so
 the disk image is the whole install and nothing has to be run in a terminal.
@@ -276,71 +265,65 @@ the disk image is the whole install and nothing has to be run in a terminal.
 tests.
 
 Components: one Go binary (daemon + CLI + native-messaging host, unix socket,
-JSON-lines IPC), a Chrome MV3 extension in `extension/` (ID pinned via `key`
-in the manifest), a Quickshell bar plugin in `bar-plugin/` (embedded into the
-binary; `baaz install-bar`), and a SwiftUI menu bar app in `macos/menubar/`
-(`baaz install-menubar`). Both widgets are thin clients: they read
-`baaz watch` and shell out to the CLI, so the daemon stays the only place
-state lives.
+JSON-lines IPC), a Chrome MV3 extension in `extension/`, a Quickshell bar
+plugin in `bar-plugin/` (embedded into the binary; `baaz install-bar`), and a
+SwiftUI menu bar app in `macos/menubar/`. Both widgets are thin clients: they
+read `baaz watch` and shell out to the CLI, so the daemon stays the only
+place state lives.
 
-Platform-specific code is split by build tag into `*_linux.go` / `*_darwin.go`
-(paths, notifications, Chrome integration). The extension is delivered
-differently per platform: Linux packs a CRX and registers it via
-`external_crx`, which macOS has rejected since Chrome 44 (its External
-Extensions directory honors only an `external_update_url` pointing at the Web
-Store), so macOS unpacks the extension and the user loads it once. Publishing
-to the Web Store would let macOS use a forced `external_update_url` instead. The Swift model in
+Platform-specific code is split by build tag into `*_linux.go` /
+`*_darwin.go` (paths, notifications, Chrome integration). The Swift model in
 `Sources/BaazCore/Snapshot.swift` mirrors `internal/ipc/protocol.go`; its
 tests decode real `baaz status --json` output to catch drift.
+
+**The extension** ships from the Chrome Web Store on every platform, under a
+fixed ID pinned by the `key` field in `extension/manifest.json`. Loading it
+unpacked, and the native-messaging manifest, both agree with that ID. The
+Store assigns the ID and rejects a package carrying a `key`, so
+`make extension-store` strips it from the upload rather than from the
+manifest, which every other route depends on. `extension/PUBLISHING.txt` is
+the listing written out, ready to paste. The extension's version in its
+manifest is its own and moves at the pace store review allows; the app's
+version is the git tag.
 
 **Updates.** Sparkle checks `appcast.xml`, published as an asset of each
 release, and verifies the archive's EdDSA signature against `SUPublicEDKey`
 in Info.plist. That is what makes updates safe without an Apple Developer ID,
 and the update is fetched by the app rather than a browser so it carries no
-quarantine flag and launches without a Gatekeeper prompt.
-
-CI signs the archive with the `SPARKLE_PRIVATE_KEY` secret — the private half
-of that key pair, exported from the maintainer's keychain with
-`generate_keys -x`. Without the secret a release still publishes, but no
+quarantine flag and launches without a Gatekeeper prompt. CI signs with the
+`SPARKLE_PRIVATE_KEY` secret. Without it a release still publishes, but no
 appcast is generated and existing installs will not see it.
 
-**Two version numbers.** The extension's version in
-`extension/manifest.json` is its own: it belongs to the Chrome Web Store
-listing and moves when the extension changes, at the pace store review
-allows. The app's version is the git tag. They used to be forced equal,
-which meant every app release demanded a store re-upload and a fresh review
-for an extension that had not changed.
-
-**Publishing the extension.** `extension/PUBLISHING.txt` is the Web Store
-listing written out, ready to paste. `make extension-store` builds the upload. The
-only difference from what baaz ships is the `key` field: locally it pins the
-extension ID so unpacked loads, the packed CRX and the native-messaging
-manifest all agree, but the store ignores it, assigns an ID of its own, and
-rejects a package that carries one — so the script strips it rather than
-removing it from the manifest, which would break every other install route.
-
-After the first upload, copy the public key the dashboard shows into
-`extension/manifest.json` as `key`, and set `defaultExtID` to the ID the
-dashboard assigns. Every route then shares the published ID. The key
-currently committed in `keys/` only pins the local ID; generate a fresh one
-if the extension is ever self-hosted again.
+**The disk image.** `macos/make-dmg.sh` lays the installer window out by
+driving Finder on the image it is about to ship, then verifies the result
+with `macos/dmg/verify-window.sh`. Doing it on the shipped image is not
+optional: Finder stores a window background as an alias, an alias resolves by
+file id before it falls back to a path, and a layout prepared on any other
+volume therefore applies its window size and icon positions perfectly while
+silently resolving the background to the wrong file. `macos/dmg/DS_Store` is
+only a fallback for a machine with no Finder session, and loses the
+background for that reason. The background itself is generated by
+`macos/dmg/render-background.swift`, and the README banner by
+`docs/render-banner.swift`.
 
 **macOS: XProtect.** Apple's rule `macos_adload_g_bundle` deletes any Mach-O
 under 15MB containing all of `_main.main`,
 `/Library/Application Support/Google/Chrome/`, `killall` and `cfprefs` — an
 adware fingerprint an ordinary build of the Chrome-integration code matched
 exactly, so macOS moved the binary to the Trash on first run. Build those
-paths with `filepath.Join` instead of writing the literal, and never shell out
-to `killall`. `make macos-check` (and CI) fails the build if all four return.
-Note that macOS caches the verdict per inode, so replace the binary rather
-than overwriting it in place.
+paths with `filepath.Join` instead of writing the literal, and never shell
+out to `killall`. `make macos-check` (and CI) fails the build if all four
+return. macOS caches the verdict per inode, so replace the binary rather than
+overwriting it in place.
 
-How it downloads fast: a probe request (`Range: bytes=0-0`) checks range
+**How it downloads fast.** A probe request (`Range: bytes=0-0`) checks range
 support; supported files are preallocated and fetched as up to 8 concurrent
 byte ranges written at their offsets, with per-segment retry and resume.
 Range-less streams get a single connection with soft-pause (TCP backpressure)
 and Range-append resume. Media pages are delegated to yt-dlp with progress
-parsed into the same job accounting.
+parsed into the same job accounting. A shared token bucket caps total
+throughput; because yt-dlp fixes `--limit-rate` at exec, a changed cap reruns
+it with `-c` rather than waiting for the next download.
 
 CLI:
 
@@ -355,12 +338,12 @@ baaz daemon | install-chrome | install-bar | install-menubar
 ```
 
 Paths, Linux: config `~/.config/baaz/config.json` · state
-`~/.local/share/baaz/` · socket `$XDG_RUNTIME_DIR/baaz.sock`.
-macOS: both under `~/Library/Application Support/baaz/` · socket `$TMPDIR`
-(short enough for the 104-byte `sun_path` limit). In-progress files live in
+`~/.local/share/baaz/` · socket `$XDG_RUNTIME_DIR/baaz.sock`. macOS: both
+under `~/Library/Application Support/baaz/` · socket `$TMPDIR` (short enough
+for the 104-byte `sun_path` limit). In-progress files live in
 `<downloadDir>/.baaz-tmp/` on both.
 
-Tests: `go test ./internal/...` and `make macos-test`.
+Tests: `go test ./...` and `make macos-test`.
 
 </details>
 

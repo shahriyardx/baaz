@@ -80,10 +80,10 @@ public final class DownloadsModel: ObservableObject {
         // A live snapshot outranks the static binary check: data is flowing,
         // so whatever launched the stream clearly works.
         if !daemonUp {
-            if cliMissing { return "baaz command not found" }
-            return "daemon starting…"
+            if cliMissing { return "not set up yet" }
+            return "starting…"
         }
-        if !settings.intercept { return "intercept off — Chrome downloads normally" }
+        if !settings.intercept { return "off — Chrome downloads on its own" }
         if activeCount > 0 { return "\(activeCount) active · \(human(snapshot.totalSpeed))/s" }
         if !jobs.isEmpty { return "\(jobs.count) waiting" }
         return "idle"
@@ -269,7 +269,7 @@ public final class DownloadsModel: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
         panel.prompt = "Choose"
-        panel.message = "Where should baaz save downloads?"
+        panel.message = "Where should Baaz save downloads?"
         let current = resolvedDownloadDir
         if !current.isEmpty {
             panel.directoryURL = URL(fileURLWithPath: current)

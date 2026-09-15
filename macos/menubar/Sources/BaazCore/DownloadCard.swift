@@ -52,7 +52,7 @@ struct DownloadCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: expanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
-                        Text(expanded ? "Hide parts" : "\(job.segments.count) parts")
+                        Text(expanded ? "Hide parts" : job.partsLabel)
                             .font(.caption)
                         Spacer()
                     }

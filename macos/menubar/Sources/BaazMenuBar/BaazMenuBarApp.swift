@@ -50,7 +50,7 @@ struct BaazMenuBarApp: App {
             SettingsWindow()
                 .environmentObject(delegate.model)
         }
-        .defaultSize(width: 520, height: 380)
+        .defaultSize(width: SettingsWindowMetrics.width, height: SettingsWindowMetrics.defaultHeight)
         .windowResizability(.contentSize)
 
         MenuBarExtra {
@@ -70,7 +70,7 @@ private struct WindowMenuButton: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("baaz Downloads") {
+        Button("Baaz Downloads") {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: "main")
         }

@@ -108,7 +108,7 @@ public struct PanelView: View {
     private var body_: some View {
         if model.jobs.isEmpty && model.recent.isEmpty {
             Text(model.cliMissing
-                 ? "Install the baaz command first, then reopen this menu."
+                 ? "Baaz isn't set up yet. Reopen the app to finish."
                  : "Nothing yet — downloads from Chrome land here.")
                 .font(.callout)
                 .foregroundStyle(.tertiary)
@@ -311,7 +311,7 @@ struct SegmentBars: View {
 
     private var summary: String {
         guard job.isSplit else { return job.singlePartReason }
-        return "\(job.segments.count) parts in parallel · \(job.segmentsComplete) finished"
+        return "\(job.segments.count) parts at once · \(job.segmentsComplete) finished"
     }
 }
 
