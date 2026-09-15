@@ -1,28 +1,19 @@
 package daemon
 
-import (
-	"os/exec"
-	"strings"
-)
-
-// notify sends a Notification Center banner; failures are irrelevant.
+// notify does nothing on macOS. The app posts the notifications instead.
 //
-// osascript is the only notification path that needs no extra install. The
-// first banner asks the user to allow notifications for the script runner —
-// a one-time macOS prompt, not an error.
-func notify(title, body string) {
-	script := "display notification " + asQuote(body) +
-		" with title " + asQuote(title)
-	go exec.Command("osascript", "-e", script).Run()
-}
-
-// asQuote renders a Go string as an AppleScript string literal. Filenames
-// reach here unfiltered, so quotes and backslashes must not break out of the
-// literal and turn a download name into script.
-func asQuote(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
-	// AppleScript literals cannot span lines; collapse any newlines.
-	s = strings.ReplaceAll(s, "\r", " ")
-	s = strings.ReplaceAll(s, "\n", " ")
-	return `"` + r.Replace(s) + `"`
-}
+// The only way for a plain process to raise a banner here is to shell out to
+// osascript with an AppleScript `display notification`, and macOS credits
+// that to the script host rather than to the app that asked for it —
+// osascript carries no bundle identity of its own. So the permission prompt
+// read "Script Editor wants to send you notifications", which from a
+// download manager is alarming enough that refusing is the sensible
+// response; after which there were no notifications and no hint why. The
+// README used to carry a line telling people to go and allow Script Editor.
+//
+// The menu bar app watches the same snapshot stream it already draws from,
+// works out what changed, and posts through UNUserNotificationCenter under
+// Baaz's own name and icon. That means no banners when the app is not
+// running — on macOS the app is how Baaz is used, and a quiet daemon is a
+// better answer than a prompt for an app the user never installed.
+func notify(title, body string) {}

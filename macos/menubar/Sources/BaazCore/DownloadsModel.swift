@@ -49,6 +49,9 @@ public final class DownloadsModel: ObservableObject {
     public init() {}
 
     @Published private(set) var snapshot = Snapshot()
+    /// What the previous snapshot said, for working out what to announce.
+    /// nil until the first one arrives.
+    private var lastStates: [String: JobState]?
     @Published private(set) var daemonUp = false
     /// Job IDs whose segment breakdown is open. Held here rather than in the
     /// row so it survives the view being rebuilt on every snapshot.
@@ -136,6 +139,21 @@ public final class DownloadsModel: ObservableObject {
 
     /// Internal rather than private so tests can drive the view from a known
     /// snapshot without a live daemon.
+    /// Posts a banner for anything that changed since the last snapshot.
+    ///
+    /// The very first snapshot after launch only seeds the comparison. It
+    /// arrives carrying everything the daemon already knows, and announcing
+    /// all of it would greet the user with a banner per download from
+    /// yesterday.
+    private func announce(_ snap: Snapshot) {
+        let now = snap.jobStates
+        defer { lastStates = now }
+        guard let before = lastStates else { return }
+        for event in downloadEvents(previous: before, current: now) {
+            Notifier.shared.post(title: event.title, body: event.name)
+        }
+    }
+
     func ingest(_ chunk: Data) {
         buffer.append(chunk)
         // Snapshots are newline-delimited; a read can split one mid-line or
@@ -147,6 +165,7 @@ public final class DownloadsModel: ObservableObject {
                   let snap = try? JSONDecoder().decode(Snapshot.self, from: Data(line)),
                   snap.type == "snapshot"
             else { continue } // partial or garbage line: keep the last snapshot
+            announce(snap)
             snapshot = snap
             daemonUp = true
         }

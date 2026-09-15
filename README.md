@@ -213,7 +213,7 @@ The Chrome extension updates itself.
 | A download seems stuck | Pause it, then resume. It carries on from where it stopped. |
 | Downloads are paused after a reboot or a crash | That is deliberate — everything already downloaded is kept. Press resume and they carry on. |
 | I want the file *and* the list entry gone | Hover the entry and click the trash icon. **Clear all** only empties the list; files stay. |
-| No notifications | The first one asks permission. Otherwise allow them in System Settings → Notifications. |
+| No notifications | Baaz asks permission the first time you open it. If you said no, turn it back on in System Settings → Notifications → Baaz. Banners need Baaz running; it stays in the menu bar. |
 | Chrome still asks where to save | Re-run the Chrome setup above, then restart Chrome. |
 
 ---
@@ -290,6 +290,18 @@ manifest, which every other route depends on. `extension/PUBLISHING.txt` is
 the listing written out, ready to paste. The extension's version in its
 manifest is its own and moves at the pace store review allows; the app's
 version is the git tag.
+
+**Notifications.** Posted by the app through `UNUserNotificationCenter`,
+not by the daemon. A plain process has no way to raise a banner here except
+by shelling out to `osascript`, and macOS credits that to the script host,
+because osascript carries no bundle identity — so the permission prompt read
+"Script Editor wants to send you notifications", which from a download
+manager is alarming enough that refusing is reasonable, after which there
+were no notifications and no hint why. The app watches the snapshot stream it
+already draws from and works out what changed (`DownloadEvents.swift`, a pure
+function over two dictionaries, so it tests without a notification centre).
+The cost is silence while the app is not running; `notify` on darwin is a
+deliberate no-op.
 
 **Updates.** Sparkle checks `appcast.xml`, published as an asset of each
 release, and verifies the archive's EdDSA signature against `SUPublicEDKey`

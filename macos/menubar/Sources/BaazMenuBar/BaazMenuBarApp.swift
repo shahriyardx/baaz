@@ -118,6 +118,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var sigterm: DispatchSourceSignal?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Ask under Baaz's own name. The prompt used to say "Script Editor",
+        // because the daemon posted through osascript.
+        Notifier.shared.requestPermission()
         guard !terminateIfDuplicate() else { return }
 
         // launchd stops the login item with SIGTERM. AppKit's own handling
