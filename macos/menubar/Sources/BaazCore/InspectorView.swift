@@ -11,9 +11,7 @@ struct InspectorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                Divider()
                 actions
-                Divider()
                 facts
                 if !job.segments.isEmpty {
                     Divider()
@@ -39,31 +37,52 @@ struct InspectorView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            FileIcon(url: job.fileURL, fallback: job.name)
-                .frame(width: 56, height: 56)
-                .frame(maxWidth: .infinity, alignment: .center)
+        VStack(alignment: .leading, spacing: 10) {
+            // Icon beside the name rather than centred above it: a 56pt
+            // block of empty space used to push the one thing you came here
+            // to read below the fold.
+            HStack(alignment: .top, spacing: 10) {
+                FileIcon(url: job.fileURL, fallback: job.name)
+                    .frame(width: 38, height: 38)
 
-            Text(job.name)
-                .font(.headline)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(job.name)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(3)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if job.state != "done", let f = job.fraction {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(statusText)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(job.isFailed ? AnyShapeStyle(Color.red)
+                                                      : AnyShapeStyle(.tint))
+                    Spacer()
+                    Text("\(Int(f * 100))%")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
                 ProgressView(value: f)
-                Text("\(Int(f * 100))%")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
         }
     }
 
+    /// One action leads and the rest follow it. Pause and Cancel used to be
+    /// the same size and weight, so nothing said which one you probably want.
     @ViewBuilder
     private var actions: some View {
         HStack(spacing: 8) {
             if job.state == "done" {
-                Button { open() } label: { Label("Open", systemImage: "arrow.up.forward.app") }
-                Button { model.reveal(job) } label: { Label("Finder", systemImage: "folder") }
+                Button { open() } label: {
+                    Label("Open", systemImage: "arrow.up.forward.app")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button { model.reveal(job) } label: {
+                    Label("Finder", systemImage: "folder")
+                }
             } else {
                 if job.isControllable {
                     Button {
@@ -71,44 +90,61 @@ struct InspectorView: View {
                     } label: {
                         Label(job.isActive ? "Pause" : "Resume",
                               systemImage: job.isActive ? "pause.fill" : "play.fill")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
                 }
                 Button { model.act("cancel", job.id) } label: {
                     Label("Cancel", systemImage: "xmark")
                 }
             }
         }
-        .controlSize(.small)
     }
 
+    /// Grouped under headings rather than run together. Eleven rows of the
+    /// same weight is a table, and a table is something you read only when
+    /// you already know what you are looking for.
     private var facts: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            section("Transfer") {
+                if job.state == "done" { fact("Status", statusText) }
+                if job.total > 0 {
+                    fact("Size", human(job.total))
+                    if job.state != "done" { fact("Downloaded", human(job.done)) }
+                } else if job.done > 0 {
+                    fact("Downloaded", "\(human(job.done)) (size unknown)")
+                }
+                if job.isActive {
+                    fact("Speed", "\(human(job.speed))/s")
+                    if job.eta >= 0 {
+                        fact("Time left", job.eta > 90 ? "\(Int(ceil(Double(job.eta) / 60)))m" : "\(job.eta)s")
+                    }
+                }
+            }
+
+            section("File") {
+                fact("Kind", job.isMedia ? "Video or audio page" : "Direct download")
+                if !job.dir.isEmpty {
+                    factButton("Saved to", job.dir) { model.reveal(job) }
+                }
+                if !job.url.isEmpty {
+                    factButton("Source", job.url) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(job.url, forType: .string)
+                    }
+                }
+                if let t = format(job.createdAt) { fact("Added", t) }
+                if let t = format(job.completedAt) { fact("Finished", t) }
+            }
+        }
+    }
+
+    private func section<C: View>(_ title: String, @ViewBuilder _ rows: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            fact("Status", statusText)
-            if job.total > 0 {
-                fact("Size", human(job.total))
-                if job.state != "done" { fact("Downloaded", human(job.done)) }
-            } else if job.done > 0 {
-                fact("Downloaded", "\(human(job.done)) (size unknown)")
-            }
-            if job.isActive {
-                fact("Speed", "\(human(job.speed))/s")
-                if job.eta >= 0 {
-                    fact("Time left", job.eta > 90 ? "\(Int(ceil(Double(job.eta) / 60)))m" : "\(job.eta)s")
-                }
-            }
-            fact("Parts", partsText)
-            fact("Type", job.isMedia ? "Media (yt-dlp)" : "Direct download")
-            if !job.dir.isEmpty {
-                factButton("Saved to", job.dir) { model.reveal(job) }
-            }
-            if !job.url.isEmpty {
-                factButton("Source", job.url) {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(job.url, forType: .string)
-                }
-            }
-            if let t = format(job.createdAt) { fact("Added", t) }
-            if let t = format(job.completedAt) { fact("Finished", t) }
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            rows()
         }
     }
 
@@ -123,22 +159,14 @@ struct InspectorView: View {
         }
     }
 
-    /// Says why a download is not split when it is not, since that is the
-    /// usual reason one is no faster than the browser's.
-    private var partsText: String {
-        if job.segments.isEmpty { return "—" }
-        if job.segments.count == 1 { return job.singlePartDetail }
-        return "\(job.segments.count) at once"
-    }
-
     private func fact(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .frame(width: 78, alignment: .leading)
+                .frame(width: 84, alignment: .leading)
             Text(value)
-                .font(.caption)
+                .font(.callout)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -151,10 +179,10 @@ struct InspectorView: View {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .frame(width: 78, alignment: .leading)
+                .frame(width: 84, alignment: .leading)
             Button(action: action) {
                 Text(value)
-                    .font(.caption)
+                    .font(.callout)
                     .lineLimit(2)
                     .truncationMode(.middle)
                     .multilineTextAlignment(.leading)

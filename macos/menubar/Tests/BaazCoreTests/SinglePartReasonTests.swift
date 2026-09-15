@@ -21,7 +21,6 @@ final class SinglePartReasonTests: XCTestCase {
         XCTAssertTrue(j.singlePartReason.contains("video sites"), j.singlePartReason)
         XCTAssertFalse(j.singlePartReason.contains("allow splitting"),
                        "a video download must not be blamed on the site: " + j.singlePartReason)
-        XCTAssertTrue(j.singlePartDetail.contains("video sites"), j.singlePartDetail)
     }
 
     func testServerWithoutRangeIsNamedAsSuch() throws {
@@ -48,28 +47,10 @@ final class SinglePartReasonTests: XCTestCase {
         for (kind, noRange) in [("media", false), ("", true), ("", false)] {
             let j = try job(kind: kind, noRange: noRange, parts: 1)
             XCTAssertFalse(j.singlePartReason.isEmpty)
-            XCTAssertFalse(j.singlePartDetail.isEmpty)
         }
     }
 }
 
-/// A one-part download read "1 parts".
-final class PartsLabelTests: XCTestCase {
-    private func job(parts: Int) throws -> Job {
-        let segs = (0..<parts).map { _ in #"{"done":1,"total":10}"# }.joined(separator: ",")
-        let json = #"[{"id":"a","name":"x","state":"active","segments":[\#(segs)]}]"#
-        return try JSONDecoder().decode([Job].self, from: Data(json.utf8))[0]
-    }
-
-    func testOnePartIsSingular() throws {
-        XCTAssertEqual(try job(parts: 1).partsLabel, "1 part")
-    }
-
-    func testSeveralPartsArePlural() throws {
-        XCTAssertEqual(try job(parts: 8).partsLabel, "8 parts")
-        XCTAssertEqual(try job(parts: 2).partsLabel, "2 parts")
-    }
-}
 
 /// Whatever the app is doing, or failed to do, has to reach the row someone
 /// is looking at. Both of these only lived in the details panel once, which

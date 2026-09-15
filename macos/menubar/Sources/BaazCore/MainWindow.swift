@@ -81,9 +81,18 @@ public struct MainWindow: View {
                     BaazGlassContainer(spacing: 8) {
                         LazyVStack(spacing: 8) {
                             ForEach(visible) { job in
-                                DownloadCard(job: job, selected: selection == job.id)
-                                    .baazGlassGroup(id: job.id, in: glassNamespace)
-                                    .onTapGesture { selection = job.id }
+                                // A Button, not .onTapGesture. The gesture
+                                // only fires on drawn content, so clicking
+                                // the padding or the glass between the labels
+                                // did nothing and only the filename selected
+                                // the row. The same trap cost this project
+                                // the menu bar panel's buttons once already.
+                                Button { selection = job.id } label: {
+                                    DownloadCard(job: job, selected: selection == job.id)
+                                        .baazGlassGroup(id: job.id, in: glassNamespace)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -94,7 +103,11 @@ public struct MainWindow: View {
                     Divider()
                     InspectorView(job: job)
                         .frame(width: 270)
-                        .background(Color(nsColor: .underPageBackgroundColor))
+                        // The one panel still on a flat fill after everything
+                        // else moved to glass, which made it read as the
+                        // least finished part of the window.
+                        .baazGlass(in: Rectangle(),
+                                   fallback: Color(nsColor: .underPageBackgroundColor))
                         .transition(.move(edge: .trailing))
                 }
             }

@@ -11,8 +11,6 @@ struct DownloadCard: View {
     @State private var hovering = false
     @State private var confirmingDelete = false
 
-    private var expanded: Bool { model.isExpanded(job.id) }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
@@ -45,24 +43,6 @@ struct DownloadCard: View {
                 }
             }
 
-            if !job.segments.isEmpty {
-                Button {
-                    model.toggleExpanded(job.id)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                        Text(expanded ? "Hide parts" : job.partsLabel)
-                            .font(.caption)
-                        Spacer()
-                    }
-                    .foregroundStyle(.secondary)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                if expanded { SegmentBars(job: job) }
-            }
         }
         .padding(12)
         .baazGlass(
