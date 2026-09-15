@@ -123,6 +123,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Notifier.shared.requestPermission()
         guard !terminateIfDuplicate() else { return }
 
+        // Out of the Dock unless a window is open. See DockPresence.
+        DockPresence.start()
+
         // launchd stops the login item with SIGTERM. AppKit's own handling
         // does not run applicationWillTerminate for it, and skipping the
         // cleanup below would strand `baaz watch` holding a subscription the

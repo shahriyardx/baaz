@@ -2,8 +2,8 @@
 # Wraps the SwiftPM executable in Baaz.app.
 #
 # SwiftPM cannot emit an app bundle, and the menu bar app needs one: only a
-# bundle carries the Info.plist whose LSUIElement keeps the app out of the
-# Dock and the app switcher.
+# bundle carries an Info.plist, and without one there is no bundle identity
+# for notifications, Sparkle or the login item.
 #
 # Usage: macos/make-app.sh [OUTPUT_DIR] [VERSION]
 set -euo pipefail
@@ -71,8 +71,11 @@ cat > "$app/Contents/Info.plist" <<PLIST
 	<key>SUEnableAutomaticChecks</key><true/>
 	<key>SUScheduledCheckInterval</key><integer>86400</integer>
 	<key>NSHighResolutionCapable</key><true/>
-	<!-- A normal app: Dock tile, app switcher, main window. The menu bar
-	     item is in addition to that, not instead of it. -->
+	<!-- No LSUIElement here on purpose. It would keep the app out of the
+	     Dock, but an accessory app has no menu bar, so every shortcut the
+	     app defines would stop working while its window is open. The Dock
+	     tile is dropped at runtime instead, only while there is no window:
+	     see DockPresence.swift. -->
 </dict>
 </plist>
 PLIST
@@ -93,8 +96,8 @@ else
   echo "make-app: WARNING — Sparkle.framework not found; in-app updates will not work"
 fi
 
-# Icon: reuse the extension artwork. Only Finder ever shows it (LSUIElement
-# hides the Dock tile), so the largest PNG on hand is enough.
+# Icon: reuse the extension artwork. Finder shows it, and so does the Dock
+# for as long as a window is open, so the largest PNG on hand is enough.
 tmp="$(mktemp -d)"
 iconset="$tmp/Baaz.iconset"
 mkdir -p "$iconset"
