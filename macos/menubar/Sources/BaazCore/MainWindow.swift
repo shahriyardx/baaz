@@ -93,6 +93,7 @@ public struct MainWindow: View {
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .draggableDownload(job)
                             }
                         }
                     }

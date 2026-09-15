@@ -330,7 +330,7 @@ struct RecentJobRow: View {
                         .font(.callout)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Text("\(human(job.total)) · click to show in Finder")
+                    Text("\(human(job.total)) · click to reveal, drag to send")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
@@ -349,5 +349,6 @@ struct RecentJobRow: View {
         .padding(.vertical, 6)
         .baazGlassOnHover(hovering, in: RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }
+        .draggableDownload(job)
     }
 }
