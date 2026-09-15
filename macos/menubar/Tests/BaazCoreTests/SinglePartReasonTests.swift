@@ -70,3 +70,41 @@ final class PartsLabelTests: XCTestCase {
         XCTAssertEqual(try job(parts: 2).partsLabel, "2 parts")
     }
 }
+
+/// Whatever the app is doing, or failed to do, has to reach the row someone
+/// is looking at. Both of these only lived in the details panel once, which
+/// meant a download could sit at 0% while its tools were being fetched, or
+/// fail, with nothing on screen saying why.
+final class CaptionTests: XCTestCase {
+    private func job(_ fields: String) throws -> Job {
+        let json = #"[{"id":"a","name":"x",\#(fields)}]"#
+        return try JSONDecoder().decode([Job].self, from: Data(json.utf8))[0]
+    }
+
+    func testTheOneTimeSetupNoteIsShown() throws {
+        let j = try job(#""state":"active","note":"getting yt-dlp (one time)""#)
+        XCTAssertEqual(j.caption, "getting yt-dlp (one time)")
+    }
+
+    func testANoteOutranksTheProgressFigures() throws {
+        let j = try job(#""state":"active","note":"getting ffmpeg (one time)","done":10,"total":100,"speed":5"#)
+        XCTAssertEqual(j.caption, "getting ffmpeg (one time)",
+                       "a setup note must not be hidden behind byte counts")
+    }
+
+    func testAFailureCarriesItsReason() throws {
+        let j = try job(#""state":"failed","error":"GitHub refused the download. Try again shortly, or run: brew install yt-dlp ffmpeg""#)
+        XCTAssertTrue(j.caption.contains("brew install"), j.caption)
+        XCTAssertTrue(j.caption.hasPrefix("failed:"), j.caption)
+    }
+
+    func testAFailureWithNoReasonStillReadsAsFailed() throws {
+        XCTAssertEqual(try job(#""state":"failed""#).caption, "failed")
+    }
+
+    func testAFinishedDownloadShowsItsSize() throws {
+        let j = try job(#""state":"done","total":1048576"#)
+        XCTAssertFalse(j.caption.isEmpty)
+        XCTAssertNotEqual(j.caption, "0B", "a finished download must not read as empty")
+    }
+}

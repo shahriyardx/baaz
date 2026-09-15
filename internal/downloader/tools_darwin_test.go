@@ -92,7 +92,7 @@ func TestRateLimitedDownloadExplainsItself(t *testing.T) {
 	if err == nil {
 		t.Fatal("a 403 must be an error")
 	}
-	for _, want := range []string{"403", "brew install"} {
+	for _, want := range []string{"refused", "brew install"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("message %q does not mention %q", err, want)
 		}

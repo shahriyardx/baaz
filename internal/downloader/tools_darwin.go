@@ -64,7 +64,7 @@ func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error 
 			name:    "yt-dlp",
 			verify:  []string{"--version"},
 		}); err != nil {
-			return fmt.Errorf("could not set up the video tools: %w", err)
+			return err
 		}
 	}
 	if _, err := e.lookupTool("ffmpeg"); err != nil {
@@ -78,7 +78,7 @@ func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error 
 			name:   "ffmpeg",
 			verify: []string{"-version"},
 		}); err != nil {
-			return fmt.Errorf("could not set up the video tools: %w", err)
+			return err
 		}
 	}
 	return nil
@@ -198,9 +198,9 @@ func (e *Engine) get(ctx context.Context, url string) (io.Reader, func(), error)
 		resp.Body.Close()
 		switch resp.StatusCode {
 		case http.StatusForbidden, http.StatusTooManyRequests:
+			// Kept short: the download list shows two lines of it.
 			return nil, func() {}, fmt.Errorf(
-				"github.com refused the download (%s). Try again in a few minutes, "+
-					"or install them yourself with: brew install yt-dlp ffmpeg", resp.Status)
+				"GitHub refused the download. Try again shortly, or run: brew install yt-dlp ffmpeg")
 		case http.StatusNotFound:
 			return nil, func() {}, fmt.Errorf("that download is no longer published (%s)", resp.Status)
 		default:
