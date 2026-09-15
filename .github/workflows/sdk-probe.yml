@@ -1,0 +1,22 @@
+name: sdk-probe
+
+# Manual only. Answers whether a runner with the macOS 26 SDK exists, which
+# is what decides if the app can adopt Liquid Glass — macOS grants the new
+# appearance based on the SDK an app was built against, not on code.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-26, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: What is on ${{ matrix.runner }}
+        run: |
+          sw_vers
+          xcodebuild -version || true
+          echo "SDK: $(xcrun --sdk macosx --show-sdk-version)"
+          swift --version
