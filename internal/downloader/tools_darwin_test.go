@@ -90,7 +90,7 @@ func TestRateLimitedDownloadExplainsItself(t *testing.T) {
 	defer srv.Close()
 
 	e := &Engine{Client: srv.Client(), ToolsDir: t.TempDir()}
-	_, _, err := e.get(context.Background(), srv.URL)
+	_, _, _, err := e.get(context.Background(), srv.URL)
 	if err == nil {
 		t.Fatal("a 403 must be an error")
 	}

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Media downloads need yt-dlp, and yt-dlp needs ffmpeg: YouTube serves video
@@ -63,6 +64,7 @@ func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error 
 			sumName: ytdlpAsset,
 			name:    "yt-dlp",
 			verify:  []string{"--version"},
+			note:    note,
 		}); err != nil {
 			return err
 		}
@@ -77,6 +79,7 @@ func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error 
 			gz:     true,
 			name:   "ffmpeg",
 			verify: []string{"-version"},
+			note:   note,
 		}); err != nil {
 			return err
 		}
@@ -91,6 +94,7 @@ type fetchSpec struct {
 	name    string   // what to install it as
 	gz      bool     // the asset is gzipped
 	verify  []string // args that must exit 0 once installed
+	note    func(string)
 }
 
 // fetchTool downloads one tool, checks it, and installs it into ToolsDir.
@@ -112,7 +116,7 @@ func (e *Engine) fetchTool(ctx context.Context, spec fetchSpec) error {
 	}
 	defer os.Remove(tmp.Name())
 
-	body, closeBody, err := e.get(ctx, spec.url)
+	body, size, closeBody, err := e.get(ctx, spec.url)
 	if err != nil {
 		tmp.Close()
 		return err
@@ -122,7 +126,11 @@ func (e *Engine) fetchTool(ctx context.Context, spec fetchSpec) error {
 	// Hash the bytes as delivered, since that is what a published sum
 	// covers; decompression happens on the way to disk.
 	sum := sha256.New()
-	tee := io.TeeReader(body, sum)
+	var counted io.Reader = body
+	if spec.note != nil {
+		counted = &progressReader{r: body, total: size, name: spec.name, note: spec.note}
+	}
+	tee := io.TeeReader(counted, sum)
 	var src io.Reader = tee
 	if spec.gz {
 		zr, err := gzip.NewReader(tee)
@@ -167,7 +175,7 @@ func (e *Engine) fetchTool(ctx context.Context, spec fetchSpec) error {
 
 // expectedSum pulls one entry out of a SHA256SUMS-style file.
 func (e *Engine) expectedSum(ctx context.Context, url, name string) (string, error) {
-	body, closeBody, err := e.get(ctx, url)
+	body, _, closeBody, err := e.get(ctx, url)
 	if err != nil {
 		return "", err
 	}
@@ -185,29 +193,75 @@ func (e *Engine) expectedSum(ctx context.Context, url, name string) (string, err
 
 // get performs a GET and turns a failure into something worth reading. A 403
 // used to arrive as a bare "HTTP 403 Forbidden" with no hint of what to do.
-func (e *Engine) get(ctx context.Context, url string) (io.Reader, func(), error) {
+func (e *Engine) get(ctx context.Context, url string) (io.Reader, int64, func(), error) {
+	noop := func() {}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, func() {}, err
+		return nil, 0, noop, err
 	}
 	resp, err := e.Client.Do(req)
 	if err != nil {
-		return nil, func() {}, fmt.Errorf("could not reach github.com — check your connection")
+		return nil, 0, noop, fmt.Errorf("could not reach github.com — check your connection")
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
 		switch resp.StatusCode {
 		case http.StatusForbidden, http.StatusTooManyRequests:
 			// Kept short: the download list shows two lines of it.
-			return nil, func() {}, fmt.Errorf(
+			return nil, 0, noop, fmt.Errorf(
 				"GitHub refused the download. Try again shortly, or run: brew install yt-dlp ffmpeg")
 		case http.StatusNotFound:
-			return nil, func() {}, fmt.Errorf("that download is no longer published (%s)", resp.Status)
+			return nil, 0, noop, fmt.Errorf("that download is no longer published (%s)", resp.Status)
 		default:
-			return nil, func() {}, fmt.Errorf("github.com returned %s", resp.Status)
+			return nil, 0, noop, fmt.Errorf("github.com returned %s", resp.Status)
 		}
 	}
-	return resp.Body, func() { resp.Body.Close() }, nil
+	return resp.Body, resp.ContentLength, func() { resp.Body.Close() }, nil
+}
+
+// progressReader turns a one-time tool download into something that moves.
+// Without it the row read "getting yt-dlp (one time)" and sat there, looking
+// stuck, for as long as 80MB takes on whatever line you happen to have.
+type progressReader struct {
+	r     io.Reader
+	total int64
+	done  int64
+	name  string
+	note  func(string)
+	last  time.Time
+}
+
+func (p *progressReader) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	p.done += int64(n)
+	// Once a second: often enough to look alive, rarely enough that the
+	// snapshot fan-out ends up doing more work than the download.
+	if now := time.Now(); now.Sub(p.last) >= time.Second || err == io.EOF {
+		p.last = now
+		p.note(p.progress())
+	}
+	return n, err
+}
+
+func (p *progressReader) progress() string {
+	if p.total <= 0 {
+		return fmt.Sprintf("setting up video support — %s", humanBytes(p.done))
+	}
+	return fmt.Sprintf("setting up video support — %s of %s",
+		humanBytes(p.done), humanBytes(p.total))
+}
+
+func humanBytes(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return fmt.Sprintf("%.1fGB", float64(n)/(1<<30))
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1fMB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.0fKB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%dB", n)
+	}
 }
 
 func runsOK(ctx context.Context, bin string, args []string) error {

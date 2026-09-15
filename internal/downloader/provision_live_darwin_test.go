@@ -72,3 +72,44 @@ func TestFreshMachineGetsBothTools(t *testing.T) {
 			strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)[0])
 	}
 }
+
+// The note has to move. It used to be one static string for the whole
+// download, which on a slow line is indistinguishable from being stuck.
+func TestSetupProgressActuallyMoves(t *testing.T) {
+	if os.Getenv("BAAZ_PROVISION_TEST") == "" {
+		t.Skip("set BAAZ_PROVISION_TEST=1 to download a real tool")
+	}
+	e := NewEngine(1, 1)
+	e.Client = &http.Client{Timeout: 5 * time.Minute}
+	e.ToolsDir = t.TempDir()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	var notes []string
+	if err := e.fetchTool(ctx, fetchSpec{
+		url:     releaseURL(ytdlpRepo, ytdlpAsset),
+		sumsURL: releaseURL(ytdlpRepo, ytdlpSums),
+		sumName: ytdlpAsset,
+		name:    "yt-dlp",
+		verify:  []string{"--version"},
+		note:    func(s string) { notes = append(notes, s) },
+	}); err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if len(notes) < 2 {
+		t.Fatalf("only %d updates for a 35MB download — the row would look frozen: %v",
+			len(notes), notes)
+	}
+	seen := map[string]bool{}
+	for _, n := range notes {
+		seen[n] = true
+	}
+	if len(seen) < 2 {
+		t.Errorf("every update said the same thing: %q", notes[0])
+	}
+	if !strings.Contains(notes[0], "of ") {
+		t.Errorf("no total shown, so there is no sense of how long: %q", notes[0])
+	}
+	t.Logf("%d updates, first %q, last %q", len(notes), notes[0], notes[len(notes)-1])
+}
