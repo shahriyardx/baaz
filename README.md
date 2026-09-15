@@ -46,7 +46,9 @@ also saves video from YouTube, Facebook, TikTok and more, with one click.
 
 ### macOS
 
-1. Download **[Baaz.dmg][dmg]**.
+1. Download **[Baaz.dmg][dmg]**. (Releases also carry a version-stamped
+   copy, `Baaz-0.2.1.dmg` and so on, if you would rather keep track of which
+   one you have.)
 2. Drag **Baaz** onto **Applications**.
 3. Open it. The first time, **right-click the app → Open** — Baaz isn't
    notarized by Apple yet, so a plain double-click is refused once.

@@ -76,10 +76,17 @@ jobs:
         # the whole macOS install rather than an app plus a setup script.
         run: |
           ./macos/make-dmg.sh build "${GITHUB_REF_NAME#v}"
+          # Ship the disk image twice, under both names. The versioned one is
+          # what someone ends up with in their Downloads folder, where
+          # "Baaz.dmg" tells them nothing six months later. The plain name has
+          # to stay as well: the README, the badge and the app's own update
+          # links all resolve through releases/latest/download/Baaz.dmg.
+          cp build/Baaz.dmg "build/Baaz-${GITHUB_REF_NAME#v}.dmg"
           # Up to the workspace root: an artifact keeps the directory
           # structure of what it uploads, and the release job looks for these
           # by bare name.
           mv build/Baaz.dmg .
+          mv "build/Baaz-${GITHUB_REF_NAME#v}.dmg" .
       - name: Zip the app as well
         # ditto preserves the bundle's symlinks and the ad-hoc signature;
         # plain `zip` breaks both and the app will not launch.
@@ -111,6 +118,7 @@ jobs:
           name: macos-app
           path: |
             Baaz.dmg
+            Baaz-*.dmg
             Baaz-macos.zip
             appcast.xml
           if-no-files-found: warn
@@ -137,6 +145,7 @@ jobs:
             baaz-darwin-arm64
             baaz-extension.zip
             Baaz.dmg
+            Baaz-*.dmg
             Baaz-macos.zip
             appcast.xml
             install.sh
