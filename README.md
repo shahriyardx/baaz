@@ -23,8 +23,9 @@ also saves video from YouTube, Facebook, TikTok and more, with one click.
 
 - **Much faster downloads.** A large file arrives in up to 8 pieces at once
   instead of one, then gets stitched back together.
-- **Pause and resume that actually works.** Close the app, reboot, lose
-  Wi-Fi — a download picks up where it stopped instead of starting over.
+- **Nothing is ever downloaded twice.** Pause a file, close the app, reboot,
+  come back tomorrow — hit resume and it carries on from the exact point it
+  reached. An interrupted download is held, not thrown away.
 - **One-click video saving.** Hover any video on YouTube, Facebook, TikTok,
   Instagram, X or Vimeo and a Download button appears. Pick a quality, or
   grab just the audio as an mp3.
@@ -207,6 +208,7 @@ The Chrome extension updates itself.
 | Chrome downloads files itself instead | Check the extension is switched on at `chrome://extensions`. Then **Settings → Browser → Re-run Chrome Setup** on macOS, or `sudo baaz install-chrome` on Linux, and restart Chrome. |
 | Video downloads fail | On macOS this usually means Baaz couldn't reach GitHub to fetch its video tools — check your connection and try again. On Linux, install `yt-dlp` and `ffmpeg`. |
 | A download seems stuck | Pause it, then resume. It carries on from where it stopped. |
+| Downloads are paused after a reboot or a crash | That is deliberate — everything already downloaded is kept. Press resume and they carry on. |
 | I want the file *and* the list entry gone | Hover the entry and click the trash icon. **Clear all** only empties the list; files stay. |
 | No notifications | The first one asks permission. Otherwise allow them in System Settings → Notifications. |
 | Chrome still asks where to save | Re-run the Chrome setup above, then restart Chrome. |
