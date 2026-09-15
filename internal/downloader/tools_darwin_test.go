@@ -2,6 +2,8 @@ package downloader
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -204,4 +206,80 @@ func TestEnsureMediaToolsDoesNothingWithoutToolsDir(t *testing.T) {
 	if notes != 0 {
 		t.Error("reported progress despite having nowhere to install")
 	}
+}
+
+// The quality menu must not be the thing that downloads 80MB of tools. It
+// opens on hover, has nowhere to show progress, and sits inside a timeout —
+// so a fresh machine spent up to 45 seconds on "Checking qualities…" in
+// silence, then gave up.
+func TestQualityLookupDoesNotProvision(t *testing.T) {
+	dir := t.TempDir()   // empty: no tools here
+	e := NewEngine(1, 1) // and a client that would fail loudly if used
+	e.Client = &http.Client{Transport: refusingTransport{t}}
+	e.ToolsDir = dir
+
+	// Genuinely hide every copy on this machine, including the package
+	// managers' — otherwise the test finds Homebrew's yt-dlp and proves
+	// nothing, which is exactly how the silent fetch went unnoticed.
+	t.Setenv("PATH", t.TempDir())
+	saved := ytdlpBinDirs
+	ytdlpBinDirs = nil
+	t.Cleanup(func() { ytdlpBinDirs = saved })
+
+	start := time.Now()
+	_, err := e.AvailableQualities(context.Background(), "https://youtube.com/watch?v=x")
+	if err == nil {
+		t.Fatal("expected it to report that the tools are not ready")
+	}
+	if !errors.Is(err, errToolsNotReady) {
+		t.Errorf("got %v, want errToolsNotReady", err)
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Errorf("took %s — it should answer at once, not go fetching", d)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Errorf("it downloaded something: %v", entries)
+	}
+}
+
+// Any HTTP at all during a quality lookup is the bug this guards against.
+type refusingTransport struct{ t *testing.T }
+
+func (r refusingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.t.Errorf("quality lookup made a network request to %s", req.URL)
+	return nil, fmt.Errorf("refused")
+}
+
+// The download path is where fetching belongs: it has a row to report on.
+// This checks the note is raised before the network is touched, so the row
+// says "getting yt-dlp (one time)" rather than sitting blank.
+func TestProvisioningAnnouncesItselfBeforeFetching(t *testing.T) {
+	saved := ytdlpBinDirs
+	ytdlpBinDirs = nil
+	t.Cleanup(func() { ytdlpBinDirs = saved })
+	t.Setenv("PATH", t.TempDir())
+
+	var notes []string
+	e := NewEngine(1, 1)
+	e.ToolsDir = t.TempDir()
+	// Refuse every request, so the only thing that can reach the caller is
+	// the note raised on the way in.
+	e.Client = &http.Client{Transport: failingTransport{}}
+
+	err := e.ensureMediaTools(context.Background(), func(s string) { notes = append(notes, s) })
+	if err == nil {
+		t.Fatal("expected the fetch to fail with no network")
+	}
+	if len(notes) == 0 {
+		t.Fatal("nothing was reported — the download row would sit blank while this happens")
+	}
+	if !strings.Contains(notes[0], "yt-dlp") || !strings.Contains(notes[0], "one time") {
+		t.Errorf("first note was %q, want something naming the tool and saying it is one-off", notes[0])
+	}
+}
+
+type failingTransport struct{}
+
+func (failingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, fmt.Errorf("no network")
 }

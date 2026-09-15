@@ -3,6 +3,7 @@ package downloader
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -47,13 +48,22 @@ func codecFamily(vcodec string) string {
 // is a property of the codec, not the resolution — saying "needs VLC" for
 // everything above 1080p is a guess that happens to fit YouTube and not
 // much else.
+// errToolsNotReady means the quality list cannot be offered yet because the
+// video tools have not been fetched. The first download will fetch them.
+var errToolsNotReady = errors.New("video tools are not ready yet")
+
 func (e *Engine) AvailableQualities(ctx context.Context, url string) ([]Quality, error) {
-	if err := e.ensureMediaTools(ctx, func(string) {}); err != nil {
-		return nil, err
-	}
+	// Deliberately does not fetch the video tools. This runs when a menu is
+	// opening, with nowhere to report progress — on a machine that has none
+	// of them yet it downloaded around 80MB in silence while the menu read
+	// "Checking qualities…", and on a slow line it simply timed out.
+	//
+	// Missing tools are an answer, not an error to solve here: the menu falls
+	// back to Best and Audio, both of which work, and the download that
+	// follows does the fetching where there is a row to show progress on.
 	bin, err := e.lookupTool("yt-dlp")
 	if err != nil {
-		return nil, err
+		return nil, errToolsNotReady
 	}
 
 	// -J is one extraction pass and no download. --no-playlist keeps a
