@@ -206,7 +206,7 @@ The Chrome extension updates itself.
 | "Baaz cannot be opened because Apple cannot check it" | Right-click Baaz in **Applications** → **Open** → **Open**. Once only. |
 | The menu bar panel says "starting…" and stays there | Click the falcon → **Quit**, then open Baaz again. If it persists, reinstall from the disk image. |
 | Chrome downloads files itself instead | Check the extension is switched on at `chrome://extensions`. Then **Settings → Browser → Re-run Chrome Setup** on macOS, or `sudo baaz install-chrome` on Linux, and restart Chrome. |
-| Video downloads fail | On macOS this usually means Baaz couldn't reach GitHub to fetch its video tools — check your connection and try again. On Linux, install `yt-dlp` and `ffmpeg`. |
+| Video downloads fail | On macOS, Baaz fetches its video tools on the first video download; if that was refused or interrupted, try again, or install them yourself with `brew install yt-dlp ffmpeg` — Baaz uses an existing copy if it finds one. On Linux, install `yt-dlp` and `ffmpeg`. |
 | A download seems stuck | Pause it, then resume. It carries on from where it stopped. |
 | Downloads are paused after a reboot or a crash | That is deliberate — everything already downloaded is kept. Press resume and they carry on. |
 | I want the file *and* the list entry gone | Hover the entry and click the trash icon. **Clear all** only empties the list; files stay. |

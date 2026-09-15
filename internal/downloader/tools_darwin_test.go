@@ -3,27 +3,25 @@ package downloader
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
 
-// Exercises the real fetch path — release lookup, download, SHA-256 check
-// against the digest GitHub reports, gunzip, install — against a tiny asset
-// from the same release the ffmpeg binary comes from. The binaries
-// themselves are tens of megabytes, which is not something to pull on every
-// test run.
-func TestFetchToolVerifiesAndInstalls(t *testing.T) {
+// Exercises the real fetch path — direct release download, checksum,
+// gunzip, install — against a tiny asset from the same release the ffmpeg
+// binary comes from. The binaries themselves are tens of megabytes, which is
+// not something to pull on every test run.
+func TestFetchToolInstallsFromADirectReleaseURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip("network test")
 	}
 	dir := t.TempDir()
-	e := &Engine{
-		Client:   &http.Client{Timeout: 60 * time.Second},
-		ToolsDir: dir,
-	}
+	e := &Engine{Client: &http.Client{Timeout: 60 * time.Second}, ToolsDir: dir}
 	asset := "darwin-arm64.LICENSE.gz"
 	if runtime.GOARCH != "arm64" {
 		asset = "darwin-x64.LICENSE.gz"
@@ -31,7 +29,11 @@ func TestFetchToolVerifiesAndInstalls(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	if err := e.fetchTool(ctx, ffmpegRepo, asset, "LICENSE", true); err != nil {
+	if err := e.fetchTool(ctx, fetchSpec{
+		url:  releaseURL(ffmpegRepo, asset),
+		gz:   true,
+		name: "LICENSE",
+	}); err != nil {
 		t.Fatalf("fetch failed: %v", err)
 	}
 	out := filepath.Join(dir, "LICENSE")
@@ -45,7 +47,6 @@ func TestFetchToolVerifiesAndInstalls(t *testing.T) {
 	if st.Mode()&0o111 == 0 {
 		t.Errorf("mode %v is not executable", st.Mode())
 	}
-	// Decompressed, not the gzip stream.
 	head := make([]byte, 2)
 	f, _ := os.Open(out)
 	defer f.Close()
@@ -53,30 +54,143 @@ func TestFetchToolVerifiesAndInstalls(t *testing.T) {
 	if head[0] == 0x1f && head[1] == 0x8b {
 		t.Error("file is still gzip-compressed")
 	}
-	// No temp files left behind.
-	entries, _ := os.ReadDir(dir)
-	for _, en := range entries {
-		if en.Name() != "LICENSE" {
-			t.Errorf("leftover %q", en.Name())
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 {
+		t.Errorf("leftover files: %v", entries)
+	}
+}
+
+// The whole point of the rewrite: provisioning must not touch api.github.com,
+// whose 60-an-hour-per-IP limit is shared by everyone behind the same
+// address and returns 403 once it is gone.
+func TestProvisioningNeverCallsTheGitHubAPI(t *testing.T) {
+	for _, u := range []string{
+		releaseURL(ytdlpRepo, ytdlpAsset),
+		releaseURL(ytdlpRepo, ytdlpSums),
+		releaseURL(ffmpegRepo, ffmpegAsset()),
+	} {
+		if strings.Contains(u, "api.github.com") {
+			t.Errorf("%s goes through the rate-limited API", u)
+		}
+		if !strings.HasPrefix(u, "https://github.com/") {
+			t.Errorf("%s is not a direct release download", u)
+		}
+		if !strings.Contains(u, "/releases/latest/download/") {
+			t.Errorf("%s is not a latest-release download URL", u)
 		}
 	}
 }
 
-// A checksum mismatch must leave nothing installed.
-func TestFetchToolRejectsBadAsset(t *testing.T) {
-	if testing.Short() {
-		t.Skip("network test")
-	}
-	dir := t.TempDir()
-	e := &Engine{Client: &http.Client{Timeout: 30 * time.Second}, ToolsDir: dir}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+// A refusal has to say what to do about it, not just repeat the status code.
+func TestRateLimitedDownloadExplainsItself(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "rate limited", http.StatusForbidden)
+	}))
+	defer srv.Close()
 
-	if err := e.fetchTool(ctx, ffmpegRepo, "no-such-asset-xyz", "nope", false); err == nil {
-		t.Fatal("expected an error for a missing asset")
+	e := &Engine{Client: srv.Client(), ToolsDir: t.TempDir()}
+	_, _, err := e.get(context.Background(), srv.URL)
+	if err == nil {
+		t.Fatal("a 403 must be an error")
+	}
+	for _, want := range []string{"403", "brew install"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("message %q does not mention %q", err, want)
+		}
+	}
+}
+
+// A wrong checksum must leave nothing installed.
+func TestFetchToolRejectsAMismatchedChecksum(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/SUMS") {
+			// A sum for content the asset does not have.
+			w.Write([]byte(strings.Repeat("a", 64) + "  tool\n"))
+			return
+		}
+		w.Write([]byte("#!/bin/sh\ntrue\n"))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := &Engine{Client: srv.Client(), ToolsDir: dir}
+	err := e.fetchTool(context.Background(), fetchSpec{
+		url:     srv.URL + "/tool",
+		sumsURL: srv.URL + "/SUMS",
+		sumName: "tool",
+		name:    "tool",
+	})
+	if err == nil || !strings.Contains(err.Error(), "checksum") {
+		t.Fatalf("expected a checksum failure, got %v", err)
 	}
 	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
 		t.Errorf("a failed fetch left files behind: %v", entries)
+	}
+}
+
+// A download that arrives intact but cannot run is not installed either — a
+// truncated or wrong-architecture binary would otherwise fail much later,
+// during someone's download, for no visible reason.
+func TestFetchToolRejectsSomethingThatWillNotRun(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("this is not a program"))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := &Engine{Client: srv.Client(), ToolsDir: dir}
+	err := e.fetchTool(context.Background(), fetchSpec{
+		url:    srv.URL + "/tool",
+		name:   "tool",
+		verify: []string{"--version"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "did not run") {
+		t.Fatalf("expected a run check to fail, got %v", err)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Errorf("left files behind: %v", entries)
+	}
+}
+
+// And one that does run is installed.
+func TestFetchToolInstallsSomethingThatRuns(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("#!/bin/sh\nexit 0\n"))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := &Engine{Client: srv.Client(), ToolsDir: dir}
+	if err := e.fetchTool(context.Background(), fetchSpec{
+		url:    srv.URL + "/tool",
+		name:   "tool",
+		verify: []string{"--version"},
+	}); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "tool")); err != nil {
+		t.Errorf("not installed: %v", err)
+	}
+}
+
+func TestExpectedSumParsesAChecksumFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(
+			"1111111111111111111111111111111111111111111111111111111111111111  other\n" +
+				"2222222222222222222222222222222222222222222222222222222222222222  yt-dlp_macos\n"))
+	}))
+	defer srv.Close()
+
+	e := &Engine{Client: srv.Client()}
+	got, err := e.expectedSum(context.Background(), srv.URL, "yt-dlp_macos")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != strings.Repeat("2", 64) {
+		t.Errorf("got %q", got)
+	}
+	if _, err := e.expectedSum(context.Background(), srv.URL, "absent"); err == nil {
+		t.Error("a missing entry must be an error, not an empty sum that skips the check")
 	}
 }
 
