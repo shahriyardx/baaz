@@ -44,13 +44,13 @@ func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error 
 	if _, err := e.lookupTool("yt-dlp"); err != nil {
 		note("getting yt-dlp (one time)")
 		if err := e.fetchTool(ctx, ytdlpRepo, ytdlpAsset, "yt-dlp", false); err != nil {
-			return fmt.Errorf("could not get yt-dlp: %w", err)
+			return fmt.Errorf("could not download the video tools — check your connection: %w", err)
 		}
 	}
 	if _, err := e.lookupTool("ffmpeg"); err != nil {
 		note("getting ffmpeg (one time)")
 		if err := e.fetchTool(ctx, ffmpegRepo, ffmpegAsset(), "ffmpeg", true); err != nil {
-			return fmt.Errorf("could not get ffmpeg: %w", err)
+			return fmt.Errorf("could not download the video tools — check your connection: %w", err)
 		}
 	}
 	return nil

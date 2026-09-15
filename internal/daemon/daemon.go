@@ -7,10 +7,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -133,9 +135,36 @@ func (m *Manager) AddBrowser(url, filename string, headers map[string]string, si
 	return m.Add(url, filename, headers, "")
 }
 
-func (m *Manager) Add(url, filename string, headers map[string]string, format string) (string, error) {
-	if url == "" {
-		return "", fmt.Errorf("missing url")
+// checkURL rejects what cannot possibly be downloaded, before a job exists.
+// Queuing it anyway meant the list filled with entries that failed a moment
+// later carrying Go's own wording — `unsupported protocol scheme ""` is not
+// something to show anyone who mistyped an address.
+func checkURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("no link given")
+	}
+	u, err := neturl.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("that does not look like a link")
+	}
+	switch u.Scheme {
+	case "http", "https":
+	case "":
+		return "", fmt.Errorf("that does not look like a link — it needs to start with http:// or https://")
+	default:
+		return "", fmt.Errorf("%s links are not supported, only http and https", u.Scheme)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("that link has no website in it")
+	}
+	return raw, nil
+}
+
+func (m *Manager) Add(rawURL, filename string, headers map[string]string, format string) (string, error) {
+	url, err := checkURL(rawURL)
+	if err != nil {
+		return "", err
 	}
 	j := &downloader.Job{
 		ID:        newID(),
@@ -447,7 +476,11 @@ func (m *Manager) speedOf(id string) int64 {
 // Snapshot builds the full state view shared by status and watch.
 // Formats reports the resolutions a media URL offers, so a UI can show the
 // ones that exist rather than a fixed list.
-func (m *Manager) Formats(url string) ([]ipc.QualityInfo, error) {
+func (m *Manager) Formats(rawURL string) ([]ipc.QualityInfo, error) {
+	url, err := checkURL(rawURL)
+	if err != nil {
+		return nil, err
+	}
 	// Extraction is a network round trip; the caller is a menu waiting to
 	// open, so it must not hang on a slow or wrong link.
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
@@ -569,6 +602,21 @@ func (m *Manager) Settings() ipc.Settings {
 	}
 }
 
+// wholeNumber parses a setting's value and reports what is wrong with it.
+// Silently ignoring a value out of range looked identical to accepting one:
+// `config segments 999` printed the settings back with segments still at 8
+// and said nothing about why.
+func wholeNumber(key, v string, lo, hi int) (int, error) {
+	n, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil {
+		return 0, fmt.Errorf("%s needs a whole number, not %q", key, v)
+	}
+	if n < lo || n > hi {
+		return 0, fmt.Errorf("%s must be between %d and %d, not %d", key, lo, hi, n)
+	}
+	return n, nil
+}
+
 // SetSettings applies key/value updates live, persists them, and broadcasts.
 func (m *Manager) SetSettings(kv map[string]string) error {
 	m.mu.Lock()
@@ -579,25 +627,37 @@ func (m *Manager) SetSettings(kv map[string]string) error {
 		case "categorize":
 			m.cfg.SetCategorize(v == "true" || v == "on" || v == "1")
 		case "segments":
-			if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 32 {
-				m.cfg.Segments = n
-				m.eng.Segments = n
+			n, err := wholeNumber(k, v, 1, 32)
+			if err != nil {
+				m.mu.Unlock()
+				return err
 			}
+			m.cfg.Segments = n
+			m.eng.Segments = n
 		case "max-active", "maxActive":
-			if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 10 {
-				m.cfg.MaxActive = n
+			n, err := wholeNumber(k, v, 1, 10)
+			if err != nil {
+				m.mu.Unlock()
+				return err
 			}
+			m.cfg.MaxActive = n
 		case "min-size", "minSizeMB":
-			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-				m.cfg.MinSizeMB = n
+			n, err := wholeNumber(k, v, 0, 1<<20)
+			if err != nil {
+				m.mu.Unlock()
+				return err
 			}
+			m.cfg.MinSizeMB = n
 		case "speed-limit", "speedLimitKB":
 			// 0 lifts the cap; anything above 1 GB/s is not a limit worth
 			// applying and is almost certainly a typo.
-			if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 1<<20 {
-				m.cfg.SpeedLimitKB = n
-				m.eng.Limiter.SetRate(int64(n) << 10)
+			n, err := wholeNumber(k, v, 0, 1<<20)
+			if err != nil {
+				m.mu.Unlock()
+				return err
 			}
+			m.cfg.SpeedLimitKB = n
+			m.eng.Limiter.SetRate(int64(n) << 10)
 		case "dir", "downloadDir":
 			if v != "" {
 				m.cfg.DownloadDir = v

@@ -342,7 +342,7 @@ func (e *Engine) ytdlpAttempt(ctx context.Context, j *Job, seg *Segment, bin str
 		if ctx.Err() != nil {
 			return lastPath, false, ctx.Err() // paused/canceled; `-c` resumes
 		}
-		return lastPath, false, fmt.Errorf("yt-dlp failed: %v (see daemon.log)", err)
+		return lastPath, false, fmt.Errorf("could not save that video")
 	}
 	return lastPath, false, nil
 }

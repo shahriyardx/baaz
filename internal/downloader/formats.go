@@ -76,7 +76,7 @@ func (e *Engine) AvailableQualities(ctx context.Context, url string) ([]Quality,
 		return nil, rerr
 	}
 	if werr != nil {
-		return nil, fmt.Errorf("yt-dlp could not read that link: %w", werr)
+		return nil, fmt.Errorf("could not read that link")
 	}
 
 	var info struct {
@@ -87,7 +87,7 @@ func (e *Engine) AvailableQualities(ctx context.Context, url string) ([]Quality,
 		} `json:"formats"`
 	}
 	if err := json.Unmarshal(data, &info); err != nil {
-		return nil, fmt.Errorf("unexpected yt-dlp output: %w", err)
+		return nil, fmt.Errorf("could not read that link")
 	}
 
 	byHeight := map[int]Quality{}
