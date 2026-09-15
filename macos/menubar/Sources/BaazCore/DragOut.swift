@@ -8,6 +8,13 @@ import SwiftUI
 /// The receiving app is handed the real file, not a path or a URL string, so
 /// anything that accepts a file drop takes it: Messages, WhatsApp, a browser
 /// upload control, Mail, Finder.
+///
+/// Dragging out of the menu bar panel works, which was not a given: that
+/// panel is a non-activating NSPanel and dismisses when it loses focus, so
+/// the drag could have been cancelled the moment it began. Confirmed by
+/// hand, since nothing about it is reachable from a test — worth knowing
+/// before anyone reaches for an NSWindow-level workaround that is not
+/// needed.
 extension View {
     /// Makes this row draggable when the download has actually finished and
     /// the file is where the daemon said it is.
