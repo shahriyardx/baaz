@@ -1,0 +1,29 @@
+name: dmg-check
+
+# Manual only. Answers one question: can the build runner drive Finder well
+# enough to lay out the installer window? If it cannot, the DMG still builds
+# but opens as a plain window, which is easy to ship without noticing.
+on:
+  workflow_dispatch:
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Toolchain
+        run: |
+          swift --version
+          sw_vers
+          echo "GUI session:"; launchctl managername || true
+      - name: Build the DMG
+        run: ./macos/make-dmg.sh build 0.0.0-check
+      - name: Verify the installer window
+        run: ./macos/dmg/verify-window.sh build/Baaz.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg-check
+          path: build/Baaz.dmg
