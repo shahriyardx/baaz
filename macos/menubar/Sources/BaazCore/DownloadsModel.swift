@@ -76,6 +76,9 @@ public final class DownloadsModel: ObservableObject {
         return t
     }
 
+    /// What the background one-time setup is doing, if anything.
+    var setupNote: String { snapshot.setup }
+
     var statusLine: String {
         // A live snapshot outranks the static binary check: data is flowing,
         // so whatever launched the stream clearly works.
@@ -85,6 +88,9 @@ public final class DownloadsModel: ObservableObject {
         }
         if !settings.intercept { return "off — Chrome downloads on its own" }
         if activeCount > 0 { return "\(activeCount) active · \(human(snapshot.totalSpeed))/s" }
+        // Only when nothing is downloading: a real download outranks a
+        // background errand the user did not ask for.
+        if !setupNote.isEmpty { return setupNote }
         if !jobs.isEmpty { return "\(jobs.count) waiting" }
         return "idle"
     }

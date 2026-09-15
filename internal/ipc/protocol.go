@@ -87,4 +87,8 @@ type Snapshot struct {
 	Jobs       []JobInfo `json:"jobs"`   // queued/active/paused/failed
 	Recent     []JobInfo `json:"recent"` // last 10 completed
 	Settings   Settings  `json:"settings"`
+	// Setup is non-empty while the one-time video tools are being fetched,
+	// e.g. "setting up video support — 12.3MB of 35.4MB". Empty the rest of
+	// the time, including when it has already been done.
+	Setup string `json:"setup,omitempty"`
 }

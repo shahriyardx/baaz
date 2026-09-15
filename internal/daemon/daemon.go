@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	neturl "net/url"
 	"os"
 	"path/filepath"
@@ -46,6 +47,8 @@ type Manager struct {
 	samples      map[string][]speedSample
 	lastSave     map[string]time.Time
 	subs         map[chan *ipc.Snapshot]struct{}
+	// setup is non-empty while the one-time video tools are being fetched.
+	setup string
 }
 
 func NewManager(cfg *config.Config) *Manager {
@@ -78,7 +81,34 @@ func NewManager(cfg *config.Config) *Manager {
 }
 
 // Start launches the scheduler tick loop.
+// prepareMediaTools fetches yt-dlp and ffmpeg in the background, once, when
+// the app starts. Doing it here rather than at the first video download
+// means the wait happens while nobody is watching, instead of in front of
+// someone who has just clicked Download.
+//
+// It never blocks anything: a download started meanwhile waits on the same
+// lock and carries on, and a failure is left alone — the download path will
+// try again, and say so there, which is where it matters.
+func (m *Manager) prepareMediaTools(ctx context.Context) {
+	go func() {
+		err := m.eng.EnsureMediaTools(ctx, func(s string) {
+			m.mu.Lock()
+			m.setup = s
+			m.mu.Unlock()
+			m.broadcast()
+		})
+		m.mu.Lock()
+		m.setup = ""
+		m.mu.Unlock()
+		if err != nil {
+			log.Printf("could not set up the video tools: %v", err)
+		}
+		m.broadcast()
+	}()
+}
+
 func (m *Manager) Start(ctx context.Context) {
+	m.prepareMediaTools(ctx)
 	go func() {
 		tick := time.NewTicker(tickInterval)
 		defer tick.Stop()
@@ -501,6 +531,7 @@ func (m *Manager) Snapshot() *ipc.Snapshot {
 	defer m.mu.Unlock()
 	snap := &ipc.Snapshot{
 		Type: "snapshot", Jobs: []ipc.JobInfo{}, Recent: []ipc.JobInfo{},
+		Setup: m.setup,
 		Settings: ipc.Settings{
 			Intercept:    m.cfg.InterceptOn(),
 			Segments:     m.cfg.Segments,

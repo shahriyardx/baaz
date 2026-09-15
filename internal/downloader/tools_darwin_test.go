@@ -154,6 +154,32 @@ func TestFetchToolRejectsSomethingThatWillNotRun(t *testing.T) {
 	}
 }
 
+// The run check is slow — yt-dlp unpacks itself the first time, which took
+// eighteen seconds here. Without a word about it the progress sits at
+// "35.4MB of 35.4MB" throughout and looks stuck right at the finish.
+func TestTheRunCheckAnnouncesItself(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("#!/bin/sh\nexit 0\n"))
+	}))
+	defer srv.Close()
+
+	var notes []string
+	e := &Engine{Client: srv.Client(), ToolsDir: t.TempDir()}
+	if err := e.fetchTool(context.Background(), fetchSpec{
+		url: srv.URL + "/tool", name: "yt-dlp", verify: []string{"--version"},
+		note: func(s string) { notes = append(notes, s) },
+	}); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+	last := notes[len(notes)-1]
+	if !strings.Contains(last, "checking") {
+		t.Errorf("last update was %q — nothing says the slow check is happening", last)
+	}
+	if !strings.Contains(last, "yt-dlp") {
+		t.Errorf("last update %q does not name what is being checked", last)
+	}
+}
+
 // And one that does run is installed.
 func TestFetchToolInstallsSomethingThatRuns(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

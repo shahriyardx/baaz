@@ -37,7 +37,8 @@ also saves video from YouTube, Facebook, TikTok and more, with one click.
   Programs and so on — or don't, if you'd rather they didn't.
 - **Updates itself.** Baaz checks daily, tells you when there's a new
   version, and installs it in place.
-- **Nothing else to install.** The disk image is the whole thing.
+- **Nothing else to install.** The disk image is the whole thing — the
+  video tools arrive in the background the first time you open Baaz.
 
 ---
 
@@ -92,8 +93,10 @@ baaz install-bar
 ```
 
 Video downloads on Linux need `yt-dlp` and `ffmpeg`; the installer offers to
-get them, or use your package manager. On macOS, Baaz fetches both itself the
-first time you save a video — the first one just takes a little longer.
+get them, or use your package manager. On macOS there is nothing to install:
+Baaz fetches both in the background the first time you open it, showing what
+it is doing in the menu bar, and uses a copy you already have if it finds
+one. Nothing waits on it — downloads work throughout.
 
 ---
 

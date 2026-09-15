@@ -166,6 +166,10 @@ type Engine struct {
 	// OnProgress, if set, is invoked roughly once per second from the running
 	// job so the caller can persist state.
 	OnProgress func(*Job)
+	// toolsMu serialises provisioning. The app fetches the video tools in
+	// the background at first launch, and a download started before that
+	// finishes would otherwise fetch the same files a second time.
+	toolsMu sync.Mutex
 }
 
 func NewEngine(segments int, minSplit int64) *Engine {

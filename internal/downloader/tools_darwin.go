@@ -48,12 +48,22 @@ func releaseURL(repo, asset string) string {
 	return "https://github.com/" + repo + "/releases/latest/download/" + asset
 }
 
+// EnsureMediaTools provisions anything missing, reporting progress through
+// note. Exported so the daemon can run it in the background at startup.
+func (e *Engine) EnsureMediaTools(ctx context.Context, note func(string)) error {
+	return e.ensureMediaTools(ctx, note)
+}
+
 // ensureMediaTools provisions anything missing. Already-installed copies —
 // Homebrew's, MacPorts', or a previous fetch — are used as they are.
 func (e *Engine) ensureMediaTools(ctx context.Context, note func(string)) error {
 	if e.ToolsDir == "" {
 		return nil // provisioning disabled; fall back to whatever is on PATH
 	}
+	// One at a time. The background fetch at first launch and a download
+	// started while it runs would otherwise pull the same 80MB twice.
+	e.toolsMu.Lock()
+	defer e.toolsMu.Unlock()
 	if _, err := e.lookupTool("yt-dlp"); err != nil {
 		note("getting yt-dlp (one time)")
 		// yt-dlp publishes SHA2-256SUMS alongside the binary, so this one
@@ -165,7 +175,15 @@ func (e *Engine) fetchTool(ctx context.Context, spec fetchSpec) error {
 	// Run it before trusting it. Without a published checksum this is the
 	// only thing standing between a truncated or wrong-architecture download
 	// and a video download that fails later for no visible reason.
+	//
+	// It is also slow — yt-dlp unpacks itself on first run, which took twelve
+	// seconds on the machine this was measured on. Say so, or the progress
+	// sits at "35.4MB of 35.4MB" for that whole time and looks stuck at
+	// exactly the moment it is nearly done.
 	if len(spec.verify) > 0 {
+		if spec.note != nil {
+			spec.note("setting up video support — checking " + spec.name)
+		}
 		if err := runsOK(ctx, tmp.Name(), spec.verify); err != nil {
 			return fmt.Errorf("the downloaded %s did not run: %w", spec.name, err)
 		}

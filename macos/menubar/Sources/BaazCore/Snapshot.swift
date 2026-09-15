@@ -165,6 +165,9 @@ struct Snapshot: Codable, Equatable {
     var jobs: [Job] = []
     var recent: [Job] = []
     var settings = BaazSettings()
+    /// Non-empty while the one-time video tools are being fetched in the
+    /// background, e.g. "setting up video support — 12.3MB of 35.4MB".
+    var setup = ""
 
     init() {}
 
@@ -175,6 +178,7 @@ struct Snapshot: Codable, Equatable {
         totalSpeed = try c.decodeIfPresent(Int64.self, forKey: .totalSpeed) ?? 0
         jobs = try c.decodeIfPresent([Job].self, forKey: .jobs) ?? []
         recent = try c.decodeIfPresent([Job].self, forKey: .recent) ?? []
+        setup = try c.decodeIfPresent(String.self, forKey: .setup) ?? ""
         settings = try c.decodeIfPresent(BaazSettings.self, forKey: .settings) ?? BaazSettings()
     }
 

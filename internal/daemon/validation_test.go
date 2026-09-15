@@ -1,6 +1,13 @@
 package daemon
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"baaz/internal/config"
+	"baaz/internal/downloader"
+	"baaz/internal/ipc"
+)
 
 // A mistyped address used to become a queued job that failed a moment later
 // with Go's own wording: `unsupported protocol scheme ""`.
@@ -87,4 +94,24 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// The background tool fetch has to reach the UI, or the app looks idle while
+// it quietly pulls 80MB.
+func TestSnapshotCarriesSetupProgress(t *testing.T) {
+	m := &Manager{
+		jobs:         map[string]*downloader.Job{},
+		cancelIntent: map[string]bool{},
+		samples:      map[string][]speedSample{},
+		lastSave:     map[string]time.Time{},
+		subs:         map[chan *ipc.Snapshot]struct{}{},
+		cfg:          &config.Config{},
+	}
+	if got := m.Snapshot().Setup; got != "" {
+		t.Errorf("idle snapshot reported setup %q", got)
+	}
+	m.setup = "setting up video support — 12.3MB of 35.4MB"
+	if got := m.Snapshot().Setup; got != m.setup {
+		t.Errorf("Snapshot().Setup = %q, want %q", got, m.setup)
+	}
 }
