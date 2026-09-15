@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg"><img alt="Download for macOS" src="https://img.shields.io/badge/Download-macOS%20·%20Baaz.dmg-2563eb?style=flat-square"></a>
   <a href="https://github.com/shahriyardx/baaz/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/shahriyardx/baaz?style=flat-square&color=555"></a>
-  <a href="https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat-square"></a>
+  <a href="https://github.com/shahriyardx/baaz/releases/latest/download/baaz-extension.zip"><img alt="Chrome extension" src="https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat-square"></a>
   <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-555?style=flat-square">
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/License-MIT-555?style=flat-square"></a>
 </p>
@@ -54,13 +54,21 @@ also saves video from YouTube, Facebook, TikTok and more, with one click.
 A falcon appears in your menu bar, and that's the install finished. Opening
 the app connects Chrome and sets Baaz to start with your Mac.
 
-Then install the Chrome extension: **[Baaz on the Chrome Web Store][ext]**,
-and restart Chrome.
+Then add the Chrome extension. It is waiting on Chrome Web Store review, so
+for now it installs by hand — once, and it keeps working after the listing
+goes live:
+
+1. Download **[baaz-extension.zip][ext]** and unzip it.
+2. Open `chrome://extensions` and switch on **Developer mode**.
+3. Click **Load unpacked** and choose the `baaz-extension` folder.
+4. Restart Chrome.
+
+Baaz offers to do step 1 for you the first time you open it.
 
 Works on macOS 13 (Ventura) and newer, on both Intel and Apple Silicon.
 
 [dmg]: https://github.com/shahriyardx/baaz/releases/latest/download/Baaz.dmg
-[ext]: https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl
+[ext]: https://github.com/shahriyardx/baaz/releases/latest/download/baaz-extension.zip
 
 ### Linux
 
@@ -79,8 +87,10 @@ curl -fsSL https://github.com/shahriyardx/baaz/releases/latest/download/install.
 Run it as yourself, **not** with `sudo`. It asks for your password once, at
 the start, and only for the Chrome step.
 
-Then install the extension from the **[Chrome Web Store][ext]**, restart
-Chrome, and run this once so Chrome can talk to Baaz:
+Then add the extension the same way as above — download
+**[baaz-extension.zip][ext]**, unzip it, and load it unpacked from
+`chrome://extensions` with Developer mode on. Restart Chrome, then run this
+once so Chrome can talk to Baaz:
 
 ```
 sudo baaz install-chrome
@@ -281,8 +291,12 @@ Platform-specific code is split by build tag into `*_linux.go` /
 `Sources/BaazCore/Snapshot.swift` mirrors `internal/ipc/protocol.go`; its
 tests decode real `baaz status --json` output to catch drift.
 
-**The extension** ships from the Chrome Web Store on every platform, under a
-fixed ID pinned by the `key` field in `extension/manifest.json`. Loading it
+**The extension** is published as `baaz-extension.zip` with each release
+while the Chrome Web Store listing is in review, and will ship from the Store
+on every platform once it is approved. Either route gives the same fixed ID,
+pinned by the `key` field in `extension/manifest.json`, so nobody has to
+reinstall when the listing goes live and the native-messaging host keeps
+accepting it throughout. Loading it
 unpacked, and the native-messaging manifest, both agree with that ID. The
 Store assigns the ID and rejects a package carrying a `key`, so
 `make extension-store` strips it from the upload rather than from the

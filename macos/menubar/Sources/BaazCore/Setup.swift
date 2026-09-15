@@ -11,8 +11,18 @@ import ServiceManagement
 public enum Setup {
     private static let versionKey = "baaz.setupCompletedForVersion"
 
-    /// Where the extension is installed from, on every platform.
+    /// The Chrome Web Store listing. Still in review, so nothing points at
+    /// it yet — kept here so there is one line to change when it goes live.
     public static let storeURL = URL(string: "https://chromewebstore.google.com/detail/nidklljbjhpljgdeebcpbbnbcijbbcdl")!
+
+    /// Where the extension actually comes from until the Store listing is
+    /// approved: the zip published with every release.
+    ///
+    /// Loading it unpacked gives the same extension ID the Store will assign,
+    /// because the manifest pins it with `key`. So the native-messaging host
+    /// accepts it either way, and nobody has to reinstall when the listing
+    /// goes live.
+    public static let extensionURL = URL(string: "https://github.com/shahriyardx/baaz/releases/latest/download/baaz-extension.zip")!
 
     /// The CLI inside this bundle.
     static var bundledCLI: URL? {

@@ -165,9 +165,11 @@ struct BrowserSettings: View {
             Section("Extension") {
                 Text("Baaz takes over downloads through its Chrome extension. If downloads still go to Chrome, the extension is probably missing or switched off.")
                     .font(.caption).foregroundStyle(.secondary)
+                Text("While it waits on Chrome Web Store review it installs by hand: download the zip, unzip it, open chrome://extensions, switch on Developer mode, then \"Load unpacked\" and choose the baaz-extension folder.")
+                    .font(.caption).foregroundStyle(.secondary)
                 HStack {
-                    Button("Get the Extension") {
-                        NSWorkspace.shared.open(Setup.storeURL)
+                    Button("Download the Extension") {
+                        NSWorkspace.shared.open(Setup.extensionURL)
                     }
                     Button("Re-run Chrome Setup") {
                         Setup.rerunChromeSetup()

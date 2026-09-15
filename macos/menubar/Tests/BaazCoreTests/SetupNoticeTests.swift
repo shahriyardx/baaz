@@ -46,3 +46,30 @@ final class SetupNoticeTests: XCTestCase {
         XCTAssertTrue(m.statusLine.contains("off"), m.statusLine)
     }
 }
+
+/// Until the Chrome Web Store listing is approved, the app sends people to
+/// the zip published with each release. The two must not get mixed up: the
+/// Store link would open a page that does not exist yet.
+final class ExtensionSourceTests: XCTestCase {
+    func testTheAppPointsAtTheReleaseZip() {
+        let u = Setup.extensionURL.absoluteString
+        XCTAssertTrue(u.hasPrefix("https://github.com/"), u)
+        XCTAssertTrue(u.hasSuffix("/baaz-extension.zip"), u)
+        XCTAssertTrue(u.contains("/releases/latest/download/"),
+                      "must follow the latest release rather than pin a version: \(u)")
+    }
+
+    /// Kept so there is one line to change when review finishes.
+    func testTheStoreLinkIsStillRecorded() {
+        XCTAssertTrue(Setup.storeURL.absoluteString.contains("chromewebstore.google.com"))
+    }
+
+    /// The zip loads unpacked under the ID the Store will assign, because the
+    /// manifest pins it. If those ever diverge the native-messaging host stops
+    /// accepting the extension, so they are checked against each other.
+    func testTheTwoRoutesShareOneExtensionID() {
+        let storeID = Setup.storeURL.lastPathComponent
+        XCTAssertEqual(storeID.count, 32, "an extension ID is 32 letters: \(storeID)")
+        XCTAssertEqual(storeID, "nidklljbjhpljgdeebcpbbnbcijbbcdl")
+    }
+}

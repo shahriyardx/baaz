@@ -147,21 +147,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Shown once per version, after setup has unpacked the extension.
     /// Shown once per version. The extension is the one part of the install
-    /// Chrome will not let an app do, but from the Web Store it is one click.
+    /// Chrome will not let an app do for you.
     private static func offerExtensionSetup() {
         let alert = NSAlert()
         alert.messageText = "One last step: add the Chrome extension"
-        alert.informativeText = "Baaz takes over downloads through its Chrome "
-            + "extension. It is on the Chrome Web Store — installing it takes "
-            + "a few seconds, and you only do it once."
-        alert.addButton(withTitle: "Open the Web Store")
+        alert.informativeText = """
+            Baaz takes over downloads through its Chrome extension.             It is waiting on Chrome Web Store review, so for now it installs             by hand — once, and it keeps working after the listing goes live.
+
+            1. Download the zip and unzip it.
+            2. Open chrome://extensions and switch on Developer mode.
+            3. Click "Load unpacked" and choose the baaz-extension folder.
+            """
+        alert.addButton(withTitle: "Download the Extension")
         alert.addButton(withTitle: "Later")
         alert.alertStyle = .informational
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(Setup.storeURL)
+            NSWorkspace.shared.open(Setup.extensionURL)
         }
     }
 
