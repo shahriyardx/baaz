@@ -58,6 +58,9 @@ public struct MainWindow: View {
         }
     }
 
+    /// Ties the cards' glass surfaces together so they can merge.
+    @Namespace private var glassNamespace
+
     @ViewBuilder
     private var detail: some View {
         if visible.isEmpty {
@@ -71,10 +74,17 @@ public struct MainWindow: View {
         } else {
             HStack(spacing: 0) {
                 ScrollView {
-                    LazyVStack(spacing: 6) {
-                        ForEach(visible) { job in
-                            DownloadCard(job: job, selected: selection == job.id)
-                                .onTapGesture { selection = job.id }
+                    // Grouped so neighbouring cards blend into one another
+                    // instead of stacking as separate panes of glass. The
+                    // spacing here must match the stack's, or they merge at
+                    // the wrong distance.
+                    BaazGlassContainer(spacing: 8) {
+                        LazyVStack(spacing: 8) {
+                            ForEach(visible) { job in
+                                DownloadCard(job: job, selected: selection == job.id)
+                                    .baazGlassGroup(id: job.id, in: glassNamespace)
+                                    .onTapGesture { selection = job.id }
+                            }
                         }
                     }
                     .padding(12)

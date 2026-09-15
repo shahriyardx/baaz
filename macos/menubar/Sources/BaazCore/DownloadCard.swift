@@ -65,14 +65,15 @@ struct DownloadCard: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(selected ? Color.accentColor.opacity(0.12)
-                      : hovering ? Color.primary.opacity(0.05)
-                      : Color.primary.opacity(0.03))
+        .baazGlass(
+            in: RoundedRectangle(cornerRadius: 12),
+            tinted: selected,
+            fallback: selected ? Color.accentColor.opacity(0.12)
+                : hovering ? Color.primary.opacity(0.05)
+                : Color.primary.opacity(0.03)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(selected ? Color.accentColor.opacity(0.5) : .clear, lineWidth: 1)
         )
         .onHover { hovering = $0 }
